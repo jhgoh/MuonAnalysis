@@ -117,6 +117,7 @@ private:
   std::vector<reco::Muon::ArbitrationType> muonArbitrationTypes_;
   StringCutObjectSelector<reco::VertexCompositeCandidate, true>* vertexCut_;
   unsigned int nMaxVetoMuon_;
+  double vetoConeSize_;
   double maxDR_, maxDPt_;
   double massMin_, massMax_;
 
@@ -139,6 +140,7 @@ FakeMuonAnalyzer::FakeMuonAnalyzer(const edm::ParameterSet& pset)
 {
   muonLabel_ = pset.getParameter<edm::InputTag>("muon");
   vetoMuonLabel_ = pset.getParameter<edm::InputTag>("vetoMuon");
+  vetoConeSize_ = pset.getParameter<double>("vetoCone");
   nMaxVetoMuon_ = pset.getParameter<unsigned int>("nMaxVetoMuon");
   vertexCandLabel_ = pset.getParameter<edm::InputTag>("vertexCand");
 
@@ -241,26 +243,33 @@ void FakeMuonAnalyzer::analyze(const edm::Event& event, const edm::EventSetup& e
   event.getByLabel(muonLabel_, muonHandle);
 
   edm::Handle<edm::View<reco::Muon> > vetoMuonHandle;
-  event.getByLabel(vetoMuonLabel_, vetoMuonHandle);
+  if ( nMaxVetoMuon_ > 0 ) event.getByLabel(vetoMuonLabel_, vetoMuonHandle);
 
   edm::Handle<edm::View<reco::VertexCompositeCandidate> > vertexCandHandle;
   event.getByLabel(vertexCandLabel_, vertexCandHandle);
 
   // Veto muons. Exclude muon if it has overlap up to n'th leading veto muons
+  std::vector<math::XYZTLorentzVector> vetoCands;
+  if ( vetoMuonHandle.isValid() )
+  {
+    for ( unsigned int i=0, n=min(vetoMuonHandle->size(), nMaxVetoMuon_); i<n; ++i )
+    {
+      const reco::Muon& vetoMuon = vetoMuonHandle->at(i);
+      vetoCands.push_back(vetoMuon.p4());
+    }
+  }
+
   std::vector<const reco::Muon*> unbiasedMuons;
-  const unsigned int nVetoMuon = std::min(vetoMuonHandle->size(), nMaxVetoMuon_);
   for ( unsigned int i=0, n=muonHandle->size(); i<n; ++i )
   {
     const reco::Muon& muon1 = muonHandle->at(i);
     const reco::TrackRef muonTrack1 = muon1.get<reco::TrackRef>();
     if ( muonTrack1.isNull() ) continue;
     bool isToVetoed = false;
-    for ( unsigned int j=0; j<nVetoMuon; ++j )
+    for ( unsigned int j=0, m=vetoCands.size(); j<m; ++j )
     {
-      const reco::Muon& muon2 = vetoMuonHandle->at(j);
-      const reco::TrackRef muonTrack2 = muon2.get<reco::TrackRef>();
-      if ( muonTrack2.isNull() ) continue;
-      if ( muon1.p4() == muon2.p4() )
+      const math::XYZTLorentzVector& vetoCand = vetoCands.at(j);
+      if ( deltaR(muon1.p4(), vetoCand) < vetoConeSize_ )
       {
         isToVetoed = true;
         break;
@@ -309,6 +318,16 @@ void FakeMuonAnalyzer::analyze(const edm::Event& event, const edm::EventSetup& e
 
     const reco::Candidate* p1 = vertexCand.daughter(0);
     const reco::Candidate* p2 = vertexCand.daughter(1);
+    // Check overlap with veto candidates
+    bool isToVetoed = false;
+    for ( int i=0, n=vetoCands.size(); i<n; ++i )
+    {
+      const math::XYZTLorentzVector& vetoCand = vetoCands.at(i);
+      if ( deltaR(p1->p4(), vetoCand) < vetoConeSize_ ) { isToVetoed = true; break; }
+      if ( deltaR(p2->p4(), vetoCand) < vetoConeSize_ ) { isToVetoed = true; break; }
+    }
+    if ( isToVetoed ) continue;
+
     pdgId1_ = p1->pdgId();
     pdgId2_ = p2->pdgId();
 
