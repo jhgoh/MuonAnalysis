@@ -43,8 +43,8 @@ def fit(hA, hB, c = None):
     elif 'Phi'  in mode: ws.factory("Voigtian::sigA(mass, m0, w0[5e-3, 1e-3, 2e-2], sigmaA[2e-3, 1e-3, 5e-3])") # Phi
     elif 'Jpsi' in mode: ws.factory("Voigtian::sigA(mass, m0, w0[1e-2, 1e-3, 2e-2], sigmaA[2e-2, 5e-3, 5e-2])") # Jpsi
     ws.factory("Voigtian::sigB(mass, m0, w0, sigmaA)")
-    ws.factory("Chebychev::bkgA(mass, {p0A[0, -5, 5], p1A[0, -5, 5]})")
-    ws.factory("Chebychev::bkgB(mass, {p0B[0, -5, 5], p1B[0, -5, 5]})")
+    ws.factory("Chebychev::bkgA(mass, {p0A[0, -5, 5]})")#, p1A[0, -5, 5]})")
+    ws.factory("Chebychev::bkgB(mass, {p0B[0, -5, 5]})")#, p1B[0, -5, 5]})")
     if 'Jpsi' in mode: ws.factory("ratio[0.999, 0, 1]")
     else: ws.factory("ratio[0.003, 0, 1]")
     ws.factory("EXPR::nSigA('nSig*ratio', nSig[%f, 0, %f], ratio)" % (0.5*nTotal, 1.1*nTotal))
@@ -59,7 +59,7 @@ def fit(hA, hB, c = None):
     weight = ws.var('weight')
     ws.pdfA = ws.pdf('pdfA')
     ws.pdfB = ws.pdf('pdfB')
- 
+
     simPdf = RooSimultaneous("simPdf", "simPdf", ws.index);
     simPdf.addPdf(ws.pdfA, "A");
     simPdf.addPdf(ws.pdfB, "B");
@@ -69,32 +69,71 @@ def fit(hA, hB, c = None):
     for i in range(hDataA.numEntries()):
         dataA.add(hDataA.get(i), hDataA.weight())
         dataB.add(hDataB.get(i), hDataB.weight())
-    dataAB = RooDataSet("dataAB", "mass", RooArgSet(mass, weight), RooFit.Index(ws.index), 
+    dataSim = RooDataSet("dataSim", "mass", RooArgSet(mass, weight), RooFit.Index(ws.index),
                         RooFit.Import("A", dataA), RooFit.Import("B", dataB), RooFit.WeightVar(weight))
 
-    simPdf.fitTo(dataAB)
-    simPdf.fitTo(dataAB, RooFit.Extended())
-    result = simPdf.fitTo(dataAB, RooFit.Save(), RooFit.Extended(), RooFit.Minos())
-  
+    #simPdf.fitTo(dataSim)
+    #simPdf.fitTo(dataSim, RooFit.Extended())
+
+    RooMsgService.instance().setGlobalKillBelow(RooFit.FATAL)
+    simNLL = simPdf.createNLL(dataSim, RooFit.Extended(True))
+    scanner = RooMinimizer(simNLL)
+
+    nll = RooProfileLL("simPdfNLL", "", simNLL, RooArgSet(ws.var("ratio")))
+    scanner.minimize("Minuit2","Scan")
+
+    nll.getVal()
+    profMinuit = nll.minimizer()
+    profMinuit.setProfile(True)
+    profMinuit.setStrategy(2)
+    profMinuit.setPrintLevel(1)
+    profMinuit.migrad()
+    profMinuit.migrad()
+    profMinuit.hesse()
+    profMinuit.minos(RooArgSet(ws.var("ratio")))
+    result = profMinuit.save()
+
+    RooMsgService.instance().setGlobalKillBelow(RooFit.ERROR)
+    #result = simPdf.fitTo(dataSim, RooFit.Save(), RooFit.Extended(), RooFit.Minos())
+
     if c != None:
         frameA = mass.frame()
-        dataAB.plotOn(frameA, RooFit.Cut("index==index::A"))
-        proj = RooFit.ProjWData(RooArgSet(ws.index), dataAB)
-        slice = RooFit.Slice(ws.index, "A")
-        simPdf.plotOn(frameA, slice, proj, RooFit.LineColor(kGreen))
-        simPdf.plotOn(frameA, slice, proj, RooFit.LineColor(kGreen), RooFit.Components("bkgA"), RooFit.LineStyle(kDashed));
+        dataSim.plotOn(frameA, RooFit.Cut("index==index::A"))
+        proj = RooFit.ProjWData(RooArgSet(ws.index), dataSim)
+        s = RooFit.Slice(ws.index, "A")
+        simPdf.plotOn(frameA, s, proj, RooFit.LineColor(kGreen))
+        simPdf.plotOn(frameA, s, proj, RooFit.LineColor(kGreen), RooFit.Components("bkgA"), RooFit.LineStyle(kDashed));
 
         frameB = mass.frame()
-        slice = RooFit.Slice(ws.index, "B")
-        dataAB.plotOn(frameB, RooFit.Cut("index==index::B"))
-        simPdf.plotOn(frameB, slice, proj, RooFit.LineColor(kRed))
-        simPdf.plotOn(frameB, slice, proj, RooFit.LineColor(kRed), RooFit.Components("bkgB"), RooFit.LineStyle(kDashed))
+        s = RooFit.Slice(ws.index, "B")
+        dataSim.plotOn(frameB, RooFit.Cut("index==index::B"))
+        simPdf.plotOn(frameB, s, proj, RooFit.LineColor(kRed))
+        simPdf.plotOn(frameB, s, proj, RooFit.LineColor(kRed), RooFit.Components("bkgB"), RooFit.LineStyle(kDashed))
 
-        c.Divide(2,1)
+        c.Divide(2,2)
         c.cd(1)
-        frameA.Draw();
+        frameA.Draw()
         c.cd(2)
-        frameB.Draw();
+        frameB.Draw()
+        c.cd(3)
+        frameNLL = ws.var("ratio").frame(RooFit.Range(0,2e-2))
+        nll.plotOn(frameNLL, RooFit.Range(0,2e-2))
+        frameNLL.Draw()
+
+        c.cd(4)
+        l = TPaveText(0,0,1,1)
+        l.SetTextAlign(11)
+        l.SetFillStyle(0)
+        l.AddText("Fit results")
+        pars = result.floatParsFinal()
+        for i in xrange(pars.getSize()):
+            par = pars[i]
+            if par.hasAsymError():
+                l.AddText(" %s = %f +%f - %f" % (par.GetName(), par.getVal(), par.getErrorHi(), par.getErrorLo()))
+            else:
+                l.AddText(" %s = %f +- %f" % (par.GetName(), par.getVal(), par.getError()))
+        l.Draw()
+        objs.append(l)
 
     #result.Print("v");
 
@@ -138,7 +177,7 @@ for catName in [x.GetName() for x in histFile.GetListOfKeys()]:
 
             hM_pass = binDir.Get("hM_pass")
             hM_fail = binDir.Get("hM_fail")
-            cFitCanvas = TCanvas("cFit_%s_%s_%s" % (catName, varName, binName), "c %s %s %s" % (catName, varName, binName), 800, 400)
+            cFitCanvas = TCanvas("cFit_%s_%s_%s" % (catName, varName, binName), "c %s %s %s" % (catName, varName, binName), 600, 600)
             ratio = fit(hM_pass, hM_fail, cFitCanvas)
             cFitCanvas.Write()
             objs.append(cFitCanvas)
