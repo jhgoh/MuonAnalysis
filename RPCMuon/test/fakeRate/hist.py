@@ -36,20 +36,27 @@ if not os.path.exists('rootlogon.C'):
 gROOT.ProcessLine(".x rootlogon.C")
 
 muonTypes = {
-    "RPCMuLoose" :"muonId%d_RPCMuLoose  == 1" % probeId,
-    "RPCMuMedium":"muonId%d_RPCMuMedium == 1" % probeId,
-    "RPCMuTight" :"muonId%d_RPCMuTight  == 1" % probeId,
-
-    "TMOneStationLoose": "muonId%d_TMOneStationLoose == 1" % probeId,
-    "TMOneStationTight": "muonId%d_TMOneStationTight == 1" % probeId,
-    "TMTwoStationTest" : "muonId%d_TMTwoStationTest  == 1" % probeId,
-
-    "globalMuon"      :"muonId%d_globalMuon       == 1" % probeId,
-    "globalMuonTight" :"muonId%d_globalMuonTight  == 1" % probeId,
-    "globalMuonMedium":"muonId%d_globalMuonMedium == 1" % probeId,
+    "GlobalMuon" : "muonId%d_globalMuon == 1" % probeId,
+    "TrackerMuon" : "muonId%d_trackerMuon == 1" % probeId,
+    "LooseMuon" : "muonId%d_looseMuon == 1" % probeId,
+    "TightMuon" : "muonId%d_tightMuon == 1" % probeId,
 }
 
-baseCut = "abs(track%d.eta()) < 1.6 && track%d.pt() > 4 && track%d.pt() < 20" % (probeId, probeId, probeId)
+#muonTypes = {
+#    "RPCMuLoose" :"muonId%d_RPCMuLoose  == 1" % probeId,
+#    "RPCMuMedium":"muonId%d_RPCMuMedium == 1" % probeId,
+#    "RPCMuTight" :"muonId%d_RPCMuTight  == 1" % probeId,
+#
+#    "TMOneStationLoose": "muonId%d_TMOneStationLoose == 1" % probeId,
+#    "TMOneStationTight": "muonId%d_TMOneStationTight == 1" % probeId,
+#    "TMTwoStationTest" : "muonId%d_TMTwoStationTest  == 1" % probeId,
+#
+#    "globalMuon"      :"muonId%d_globalMuon       == 1" % probeId,
+#    "globalMuonTight" :"muonId%d_globalMuonTight  == 1" % probeId,
+#    "globalMuonMedium":"muonId%d_globalMuonMedium == 1" % probeId,
+#}
+
+baseCut = "abs(track%d.eta()) < 1.6 && track%d.pt() > 4 && track%d.pt() < 20 && lxy < 4" % (probeId, probeId, probeId)
 #baseCut = "abs(track%d.eta()) < 1.6 && track%d.pt() > 4 && track%d.pt() < 500" % (probeId, probeId, probeId)
 histDefs = [
     ("AbsEta", "Pseudorapidity |#eta|", "abs(track%d.eta())" % probeId, [0.0, 0.9, 1.2, 1.6]),
