@@ -53,6 +53,7 @@ private:
   edm::InputTag leptonLabel_;
   edm::InputTag jetLabel_;
   edm::InputTag metLabel_;
+  edm::InputTag vertexLabel_;
   std::string bTagType_;
 
   // Cuts
@@ -64,10 +65,12 @@ private:
   int run_, lumi_, event_;
   math::XYZTLorentzVector lepton_, met_;
   int charge_;
+  double eventWeight_, eventWeightUp_, eventWeightDn_;
+  int nPV_;
   std::vector<math::XYZTLorentzVector>* jets_;
   std::vector<double>* bTags_;
   std::vector<int>* jetMCBits_;
-
+  std::vector<double>* pTGen_; 
 };
 
 template<typename Lepton>
@@ -80,6 +83,7 @@ EventTupleProducer<Lepton>::EventTupleProducer(const edm::ParameterSet& pset)
   jetLabel_ = pset.getParameter<edm::InputTag>("jet");
   metLabel_ = pset.getParameter<edm::InputTag>("met");
   leptonLabel_ = pset.getParameter<edm::InputTag>("lepton");
+  vertexLabel_ = pset.getParameter<edm::InputTag>("vertex");
 
   std::string leptonCut = pset.getParameter<std::string>("leptonCut");
   isGoodLepton_ = new StringCutObjectSelector<Lepton, true>(leptonCut);
@@ -98,13 +102,21 @@ EventTupleProducer<Lepton>::EventTupleProducer(const edm::ParameterSet& pset)
   tree_->Branch("lepton", "ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double>", &lepton_);
   tree_->Branch("charge", &charge_, "charge/I");
   tree_->Branch("met", "ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double>", &met_);
+  tree_->Branch("vertex", &nPV_, "nPV_/I");
+  
 
   jets_ = new std::vector<math::XYZTLorentzVector>();
   bTags_ = new std::vector<double>();
   jetMCBits_ = new std::vector<int>();
+  pTGen_ = new std::vector<double>();
+//  eventWeight_ = new std::vector<double>();
   tree_->Branch("jets", "std::vector<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > >", &jets_);
   tree_->Branch("bTags", "std::vector<double>", &bTags_);
   tree_->Branch("jetMCBits", "std::vector<int>", &jetMCBits_);
+  tree_->Branch("pTGen", "std::vector<double>", &pTGen_);
+  tree_->Branch("PUweight", &eventWeight_, "PUweight/d");
+  tree_->Branch("PUweightup", &eventWeightUp_, "PUweightup/d");
+  tree_->Branch("PUweightdn", &eventWeightDn_, "PUweightdn/d");
 }
 
 template<typename Lepton>
@@ -113,6 +125,7 @@ EventTupleProducer<Lepton>::~EventTupleProducer()
   if ( jets_ ) delete jets_;
   if ( bTags_ ) delete bTags_;
   if ( jetMCBits_ ) delete jetMCBits_;
+  if ( pTGen_ ) delete pTGen_;
 }
 
 template<typename Lepton>
@@ -123,6 +136,23 @@ void EventTupleProducer<Lepton>::analyze(const edm::Event& event, const edm::Eve
   jets_->clear();
   bTags_->clear();
   jetMCBits_->clear();
+  pTGen_->clear();
+
+  edm::Handle<edm::View<reco::Vertex> > vertexHandle;
+  event.getByLabel(vertexLabel_, vertexHandle);
+  nPV_ = vertexHandle->size();
+  edm::Handle<double> eventWeightHandle;
+  event.getByLabel(edm::InputTag("PUweight", "weight"), eventWeightHandle);
+  eventWeight_= *eventWeightHandle;
+
+  edm::Handle<double> eventWeightUpHandle;
+  event.getByLabel(edm::InputTag("PUweight", "weightplus"), eventWeightUpHandle);
+  eventWeightUp_= *eventWeightUpHandle;
+
+  edm::Handle<double> eventWeightDnHandle;
+  event.getByLabel(edm::InputTag("PUweight", "weightminus"), eventWeightDnHandle);
+  eventWeightDn_= *eventWeightDnHandle;
+
 
   edm::Handle<edm::View<Lepton> > leptonHandle;
   event.getByLabel(leptonLabel_, leptonHandle);
@@ -184,6 +214,7 @@ void EventTupleProducer<Lepton>::analyze(const edm::Event& event, const edm::Eve
             if ( hasMother(&p, 24) ) w1Decay.push_back(&p);
             else if ( hasMother(&p, -24) ) w2Decay.push_back(&p);
         }
+      pTGen_->push_back(p.pt());
       }
 
       if ( !t1 or !t2 or !w1 or !w2 or !b1 or !b2 ) return;
@@ -235,7 +266,6 @@ void EventTupleProducer<Lepton>::analyze(const edm::Event& event, const edm::Eve
     if ( dRHadJ1 < 0.5 or dRHadJ2 < 0.5 ) jetMCBit |= 4;
 
     jetMCBits_->push_back(jetMCBit);
-
   }
   if ( jets_->size() < 3 ) return;
 
