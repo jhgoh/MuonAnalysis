@@ -32,8 +32,6 @@ runOnMC = options.runOnMC
 
 # Step 0a
 useTrigger      = True
-if runOnMC:
-  useTrigger    = False
 # Step 0b
 useGoodVertex   = True
 # Step 1
@@ -47,7 +45,7 @@ use1Jet         = True
 # Step 4b
 use2Jets        = True
 # Step 4c (choice depends on trigger)
-use3JetsLoose   = False 
+use3JetsLoose   = True 
 use3JetsTight   = False 
 # Step 5
 use4Jets        = False
@@ -56,8 +54,6 @@ use4Jets        = False
 
 ### Trigger matching?
 addTriggerMatching = True
-if runOnMC:
-  addTriggerMatching = False
 
 ### Reference selection
 
