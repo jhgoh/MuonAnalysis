@@ -95,6 +95,15 @@ void MuonRPCRecHitAnalyzer::analyze(const edm::Event& event, const edm::EventSet
   run_ = event.id().run();
   event_ = event.id().event();
   lumi_ = event.id().luminosityBlock();
+  pt_->clear();
+  eta_->clear();
+  phi_->clear();
+  charge_->clear();
+  nHit_->clear();
+  nPixelHit_->clear();
+  nTrackerHit_->clear();
+  nMuonHit_->clear();
+  nRPCHit_->clear();
 
   hEvent_->Fill(0);
 
