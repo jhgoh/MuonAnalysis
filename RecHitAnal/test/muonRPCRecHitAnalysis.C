@@ -11,7 +11,7 @@ using namespace std;
 typedef std::vector<double> doubles;
 typedef std::vector<int> ints;
 
-void analyzeRPCTree()
+void muonRPCRecHitAnalysis()
 {
   TFile* f = TFile::Open("RPCAnalysis.root");
   TTree* tree = (TTree*)f->Get("RPC/tree");
