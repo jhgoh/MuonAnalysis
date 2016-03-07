@@ -87,7 +87,7 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset)
   tree_->Branch("pdgId1", &pdgId1_, "pdgId1/I");
   tree_->Branch("pdgId2", &pdgId2_, "pdgId2/I");
 
-  hM_ = fs->make<TH1F>("hM", "hM", 100, 0.4, 0.6);
+  hM_ = fs->make<TH1F>("hM", "hM", 2000, 0., 2.0);
 }
 
 void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetup&)
