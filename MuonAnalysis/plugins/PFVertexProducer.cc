@@ -109,21 +109,33 @@ void PFVertexProducer::produce(edm::Event& event, const edm::EventSetup& eventSe
   event.getByToken(vertexToken_, vertexHandle);
   reco::Vertex pv = vertexHandle->at(0);
 
+  std::vector<reco::TransientTrack> transTracks;
   for ( auto cand1 = candHandle->begin(); cand1 != candHandle->end(); ++cand1 ) {
     if ( cand1->pt() < trkMinPt_ or std::abs(cand1->eta()) > trkMaxEta_ ) continue;
     auto transTrack1 = trackBuilder->build(cand1->pseudoTrack());
+    transTracks.push_back(transTrack1);
+  }
 
-    for ( auto cand2 = isSameFlav_ ? cand1+1 : candHandle->begin(); cand2 != candHandle->end(); ++cand2 ) {
-      if ( cand1 == cand2 ) continue;
-      if ( cand1->charge() == cand2->charge() ) continue;
-      if ( cand1->pt() < trkMinPt_ or std::abs(cand2->eta()) > trkMaxEta_ ) continue;
+  for ( auto itr1 = transTracks.begin(); itr1 != transTracks.end(); ++itr1 ) {
+    const reco::Track& track1 = itr1->track();
+    const double e1 = sqrt(mass1_*mass1_ + track1.momentum().mag2());
 
-      const double rawMass = (cand1->p4()+cand2->p4()).mass();
+    for ( auto itr2 = isSameFlav_ ? itr1+1 : transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
+      if ( itr1 == itr2 ) continue;
+      if ( itr1->charge() == itr2->charge() ) continue;
+      const reco::Track& track2 = itr2->track();
+      const double e2 = sqrt(mass2_*mass2_ + track2.momentum().mag2());
+
+      const double px = track1.px() + track2.px();
+      const double py = track1.px() + track2.px();
+      const double pz = track1.px() + track2.px();
+      const double p2 = px*px + py*py + pz*pz;
+      const double e = e1+e2;
+
+      const double rawMass = sqrt(e*e - p2);
       if ( rawMass < vtxMinRawMass_ or rawMass > vtxMaxRawMass_ ) continue;
 
-      auto transTrack2 = trackBuilder->build(cand2->pseudoTrack());
-
-      auto sv = fitSV(pv, transTrack1, transTrack2);
+      auto sv = fitSV(pv, *itr1, *itr2);
       if ( sv.first.pdgId() == 0 ) continue;
 
       out->push_back(sv.first);
