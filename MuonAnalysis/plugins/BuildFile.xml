@@ -1,0 +1,11 @@
+<use name="CommonTools/UtilAlgos"/>
+<use name="DataFormats/MuonReco"/>
+<use name="DataFormats/PatCandidates"/>
+<use name="DataFormats/VertexReco"/>
+<use name="RecoVertex/KalmanVertexFit"/>
+<use name="TrackingTools/Records"/>
+<use name="TrackingTools/TransientTrack"/>
+
+<library   name="SKKUMuonAnalysis_plugins" file="*.cc">
+  <flags   EDM_PLUGIN="1"/>
+</library>
