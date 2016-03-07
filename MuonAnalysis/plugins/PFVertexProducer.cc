@@ -70,8 +70,8 @@ PFVertexProducer::PFVertexProducer(const edm::ParameterSet& pset):
     vtxPdgId_ = 333;
     isSameFlav_ = true;
     mass1_ = kaonMass; mass2_ = kaonMass;
-    vtxMinRawMass_ = 1.08-0.3; vtxMaxRawMass_ = 1.08+0.3;
-    vtxMinMass_ = 1.08-0.2; vtxMaxMass_ = 1.08+0.2;
+    vtxMinRawMass_ = 0.95; vtxMaxRawMass_ = 1.08;
+    vtxMinMass_ = 0.98; vtxMaxMass_ = 1.06;
   }
   else if ( vtxType == "lambda" ) {
     vtxPdgId_ = 3122;
