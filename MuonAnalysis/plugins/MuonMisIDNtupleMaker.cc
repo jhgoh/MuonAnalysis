@@ -156,16 +156,17 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   tree_->Branch("lxy" , &b_lxy , "lxy/D" );
   tree_->Branch("pdgId1", &b_pdgId1, "pdgId1/I");
   tree_->Branch("pdgId2", &b_pdgId2, "pdgId2/I");
+  tree_->Branch("track1", "math::XYZTLorentzVector", &b_track1);
+  tree_->Branch("track2", "math::XYZTLorentzVector", &b_track2);
 
   tree_->Branch("muQ1", &b_muQ1, "muQ1/I");
   tree_->Branch("muQ2", &b_muQ2, "muQ2/I");
   tree_->Branch("muId1", &b_muId1, "muId1/I");
   tree_->Branch("muId2", &b_muId2, "muId2/I");
-
+  tree_->Branch("muDR1", &b_muDR1, "muDR1/D");
+  tree_->Branch("muDR2", &b_muDR2, "muDR2/D");
   tree_->Branch("mu1", "math::XYZTLorentzVector", &b_mu1);
   tree_->Branch("mu2", "math::XYZTLorentzVector", &b_mu2);
-  tree_->Branch("track1", "math::XYZTLorentzVector", &b_track1);
-  tree_->Branch("track2", "math::XYZTLorentzVector", &b_track2);
 
   hN_ = fs->make<TH1D>("hN", "hN", 100, 0, 100);
   hMAll_ = fs->make<TH1D>("hMAll", "hMAll", 100, vtxMinMass_, vtxMaxMass_);
@@ -177,6 +178,13 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   b_run = event.id().run();
   b_lumi = event.id().luminosityBlock();
   b_event = event.id().event();
+
+  b_genWeight = b_puWeight = -999;
+  b_nPV = -999;
+  b_mass = b_pt = b_lxy = -999;
+  b_pdgId1 = b_pdgId2 = -999;
+  b_muQ1 = b_muQ2 = b_muId1 = b_muId2 = -999;
+  b_muDR1 = b_muDR2 = -999;
 
   edm::ESHandle<TransientTrackBuilder> trackBuilder;
   eventSetup.get<TransientTrackRecord>().get("TransientTrackBuilder", trackBuilder);
