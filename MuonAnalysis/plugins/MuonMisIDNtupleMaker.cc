@@ -257,8 +257,8 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     const double dR1 = deltaR(sv.leg1, mu.p4());
     const double dR2 = deltaR(sv.leg2, mu.p4());
 
-    muRefs1[dR1] = reco::MuonRef(muonHandle, i);
-    muRefs2[dR2] = reco::MuonRef(muonHandle, i);
+    if ( dR1 < 0.3 ) muRefs1[dR1] = reco::MuonRef(muonHandle, i);
+    if ( dR2 < 0.3 ) muRefs2[dR2] = reco::MuonRef(muonHandle, i);
   }
   reco::MuonRef muRef1, muRef2;
   if      ( !muRefs1.empty() ) muRef1 = muRefs1.begin()->second;
@@ -394,7 +394,7 @@ int MuonMisIDNtupleMaker::muonIdBit(const reco::Muon& mu, const reco::Vertex& vt
   int result = 0;
 
   if ( muon::isLooseMuon(mu)       ) result |= 1<<0;
-  if ( muon::isMediumMuon(mu, vtx) ) result |= 1<<1;
+  if ( muon::isMediumMuon(mu) ) result |= 1<<1;
   if ( muon::isTightMuon(mu, vtx)  ) result |= 1<<2;
 
   return result;
