@@ -23,8 +23,9 @@ process.source.fileNames = [
     '/store/mc/RunIIFall15DR76/TTJets_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/AODSIM/PU25nsData2015v1_76X_mcRun2_asymptotic_v12-v1/50000/D0188731-42BC-E511-B9C0-02163E00B00F.root',
 ]
 
-process.ksVertex = cms.EDProducer("TrackVertexProducer",
-    src = cms.InputTag("generalTracks"),
+process.ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
+    muons = cms.InputTag("muons"),
+    tracks = cms.InputTag("generalTracks"),
     vertex = cms.InputTag("offlinePrimaryVertices"),
 
     trkMinPt = cms.double(4.0),
@@ -40,15 +41,8 @@ process.ksVertex = cms.EDProducer("TrackVertexProducer",
     vtxChi2 = cms.double(7.),
     vtxSignif = cms.double(.0),
 )
-process.phiVertex = process.ksVertex.clone(vtxType = cms.string("phi"))
-process.lambdaVertex = process.ksVertex.clone(vtxType = cms.string("lambda"))
-
-process.ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
-    sv = cms.InputTag("ksVertex"),
-    mu = cms.InputTag("slimmedMuons"),
-)
-process.phi = process.ks.clone(sv = cms.InputTag("phiVertex"))
-process.lamb = process.ks.clone(sv = cms.InputTag("lambdaVertex"))
+process.phi = process.ks.clone(vtxType = cms.string("phi"))
+process.lamb = process.ks.clone(vtxType = cms.string("lambda"))
 
 process.TFileService = cms.Service("TFileService",
     fileName = cms.string("hist.root"),
