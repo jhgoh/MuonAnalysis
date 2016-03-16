@@ -186,6 +186,8 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   b_muQ1 = b_muQ2 = b_muId1 = b_muId2 = -999;
   b_muDR1 = b_muDR2 = -999;
 
+  b_track1 = b_track2 = b_mu1 = b_mu2 = math::XYZTLorentzVector();
+
   edm::ESHandle<TransientTrackBuilder> trackBuilder;
   eventSetup.get<TransientTrackRecord>().get("TransientTrackBuilder", trackBuilder);
 
@@ -257,46 +259,50 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   b_lxy = sv.lxy;
   b_pdgId1 = sv.q1*pdgId1_;
   b_pdgId2 = sv.q2*pdgId2_;
+  b_track1 = sv.leg1;
+  b_track2 = sv.leg2;
   hM_->Fill(b_mass);
 
   // Match muons to the SV legs
-  std::map<double, reco::MuonRef> muRefs1, muRefs2;
+  std::map<double, int> muIdxs1, muIdxs2;
   for ( int i=0, n=muonHandle->size(); i<n; ++i ) {
     const auto& mu = muonHandle->at(i);
     const double dR1 = deltaR(sv.leg1, mu.p4());
     const double dR2 = deltaR(sv.leg2, mu.p4());
 
-    if ( dR1 < 0.3 ) muRefs1[dR1] = reco::MuonRef(muonHandle, i);
-    if ( dR2 < 0.3 ) muRefs2[dR2] = reco::MuonRef(muonHandle, i);
+    if ( dR1 < 0.3 ) muIdxs1[dR1] = i;
+    if ( dR2 < 0.3 ) muIdxs2[dR2] = i;
   }
-  reco::MuonRef muRef1, muRef2;
-  if      ( !muRefs1.empty() ) muRef1 = muRefs1.begin()->second;
-  else if ( !muRefs2.empty() ) muRef2 = muRefs2.begin()->second;
+  int muIdx1 = -1, muIdx2 = -1;
+  if      ( !muIdxs1.empty() ) muIdx1 = muIdxs1.begin()->second;
+  else if ( !muIdxs2.empty() ) muIdx2 = muIdxs2.begin()->second;
   // Special care for duplication
-  if ( muRef1.isNonnull() and muRef1 == muRef2 ) {
-    const double dR1 = muRefs1.begin()->first;
-    const double dR2 = muRefs2.begin()->first;
-    if ( dR1 > dR2 ) {
-      if ( muRefs1.size() > 1 ) muRef1 = std::next(muRefs1.begin())->second;
-      else muRef1 = reco::MuonRef();
+  if ( muIdx1 == muIdx2 and muIdx1 != -1 ) {
+    const double dR1 = muIdxs1.begin()->first;
+    const double dR2 = muIdxs2.begin()->first;
+    if ( dR1 >= dR2 ) {
+      if ( muIdxs1.size() > 1 ) muIdx1 = std::next(muIdxs1.begin())->second;
+      else muIdx1 = -1;
     }
     else {
-      if ( muRefs2.size() > 1 ) muRef2 = std::next(muRefs2.begin())->second;
-      else muRef2 = reco::MuonRef();
+      if ( muIdxs2.size() > 1 ) muIdx2 = std::next(muIdxs2.begin())->second;
+      else muIdx2 = -1;
     }
   }
 
-  if ( muRef1.isNonnull() ) {
-    b_muQ1 = muRef1->charge();
-    b_mu1 = muRef1->p4();
-    b_muId1 = muonIdBit(*muRef1, pv);
-    b_muDR1 = deltaR(muRef1->p4(), sv.leg1);
+  if ( muIdx1 >= 0 ) {
+    const auto& mu = muonHandle->at(muIdx1);
+    b_muQ1 = mu.charge();
+    b_mu1 = mu.p4();
+    b_muId1 = muonIdBit(mu, pv);
+    b_muDR1 = deltaR(mu.p4(), sv.leg1);
   }
-  if ( muRef2.isNonnull() ) {
-    b_muQ2 = muRef2->charge();
-    b_mu2 = muRef2->p4();
-    b_muId2 = muonIdBit(*muRef2, pv);
-    b_muDR2 = deltaR(muRef2->p4(), sv.leg2);
+  if ( muIdx2 >= 0 ) {
+    const auto& mu = muonHandle->at(muIdx2);
+    b_muQ2 = mu.charge();
+    b_mu2 = mu.p4();
+    b_muId2 = muonIdBit(mu, pv);
+    b_muDR2 = deltaR(mu.p4(), sv.leg2);
   }
 
   tree_->Fill();
