@@ -113,6 +113,8 @@ void TrackVertexProducer::produce(edm::Event& event, const edm::EventSetup& even
   for ( auto track = trackHandle->begin(); track != trackHandle->end(); ++track ) {
     if ( track->pt() < trkMinPt_ or std::abs(track->eta()) > trkMaxEta_ ) continue;
     // Apply basic track quality cuts
+    if ( !track->quality(reco::TrackBase::loose) or
+         track->normalizedChi2() >= 5 or track->numberOfValidHits() < 6 ) continue;
     auto transTrack = trackBuilder->build(&*track);
     transTracks.push_back(transTrack);
   }
