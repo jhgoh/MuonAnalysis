@@ -393,7 +393,9 @@ int MuonMisIDNtupleMaker::muonIdBit(const reco::Muon& mu, const reco::Vertex& vt
 {
   int result = 0;
 
-  if ( muon::isLooseMuon(mu) ) result += 1;
+  if ( muon::isLooseMuon(mu)       ) result |= 1<<0;
+  if ( muon::isMediumMuon(mu, vtx) ) result |= 1<<1;
+  if ( muon::isTightMuon(mu, vtx)  ) result |= 1<<2;
 
   return result;
 }
