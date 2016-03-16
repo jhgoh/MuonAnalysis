@@ -15,11 +15,11 @@
 
 using namespace std;
 
-class PFVertexProducer : public edm::stream::EDProducer<>
+class TrackVertexProducer : public edm::stream::EDProducer<>
 {
 public:
-  PFVertexProducer(const edm::ParameterSet& pset);
-  virtual ~PFVertexProducer() {};
+  TrackVertexProducer(const edm::ParameterSet& pset);
+  virtual ~TrackVertexProducer() {};
 
   void produce(edm::Event& event, const edm::EventSetup& eventSetup) override;
 
@@ -28,7 +28,7 @@ private:
                                                           const reco::TransientTrack& transTrack1,
                                                           const reco::TransientTrack& transTrack2) const;
 
-  edm::EDGetTokenT<pat::PackedCandidateCollection> candToken_;
+  edm::EDGetTokenT<reco::TrackCollection> trackToken_;
   edm::EDGetTokenT<reco::VertexCollection> vertexToken_;
 
   const double pionMass = 0.1396;
@@ -45,7 +45,7 @@ private:
   bool isSameFlav_;
 };
 
-PFVertexProducer::PFVertexProducer(const edm::ParameterSet& pset):
+TrackVertexProducer::TrackVertexProducer(const edm::ParameterSet& pset):
   trkMinPt_(pset.getParameter<double>("trkMinPt")),
   trkMaxEta_(pset.getParameter<double>("trkMaxEta")),
   vtxMinLxy_(pset.getParameter<double>("vtxMinLxy")),
@@ -55,7 +55,7 @@ PFVertexProducer::PFVertexProducer(const edm::ParameterSet& pset):
   vtxChi2_(pset.getParameter<double>("vtxChi2")),
   vtxSignif_(pset.getParameter<double>("vtxSignif"))
 {
-  candToken_ = consumes<std::vector<pat::PackedCandidate> >(pset.getParameter<edm::InputTag>("src"));
+  trackToken_ = consumes<reco::TrackCollection>(pset.getParameter<edm::InputTag>("src"));
   vertexToken_ = consumes<reco::VertexCollection>(pset.getParameter<edm::InputTag>("vertex"));
 
   const string vtxType = pset.getParameter<string>("vtxType");
@@ -94,7 +94,7 @@ PFVertexProducer::PFVertexProducer(const edm::ParameterSet& pset):
   produces<std::vector<double> >("lxy");
 }
 
-void PFVertexProducer::produce(edm::Event& event, const edm::EventSetup& eventSetup)
+void TrackVertexProducer::produce(edm::Event& event, const edm::EventSetup& eventSetup)
 {
   std::auto_ptr<reco::VertexCompositeCandidateCollection> out(new reco::VertexCompositeCandidateCollection);
   std::auto_ptr<std::vector<double> > out_lxy(new std::vector<double>());
@@ -102,18 +102,19 @@ void PFVertexProducer::produce(edm::Event& event, const edm::EventSetup& eventSe
   edm::ESHandle<TransientTrackBuilder> trackBuilder;
   eventSetup.get<TransientTrackRecord>().get("TransientTrackBuilder", trackBuilder);
 
-  edm::Handle<pat::PackedCandidateCollection> candHandle;
-  event.getByToken(candToken_, candHandle);
+  edm::Handle<reco::TrackCollection> trackHandle;
+  event.getByToken(trackToken_, trackHandle);
 
   edm::Handle<reco::VertexCollection> vertexHandle;
   event.getByToken(vertexToken_, vertexHandle);
   reco::Vertex pv = vertexHandle->at(0);
 
   std::vector<reco::TransientTrack> transTracks;
-  for ( auto cand1 = candHandle->begin(); cand1 != candHandle->end(); ++cand1 ) {
-    if ( cand1->pt() < trkMinPt_ or std::abs(cand1->eta()) > trkMaxEta_ ) continue;
-    auto transTrack1 = trackBuilder->build(cand1->pseudoTrack());
-    transTracks.push_back(transTrack1);
+  for ( auto track = trackHandle->begin(); track != trackHandle->end(); ++track ) {
+    if ( track->pt() < trkMinPt_ or std::abs(track->eta()) > trkMaxEta_ ) continue;
+    // Apply basic track quality cuts
+    auto transTrack = trackBuilder->build(&*track);
+    transTracks.push_back(transTrack);
   }
 
   for ( auto itr1 = transTracks.begin(); itr1 != transTracks.end(); ++itr1 ) {
@@ -147,9 +148,9 @@ void PFVertexProducer::produce(edm::Event& event, const edm::EventSetup& eventSe
   event.put(out_lxy, "lxy");
 }
 
-std::pair<reco::VertexCompositeCandidate, double> PFVertexProducer::fitSV(const reco::Vertex& pv,
-                                                                          const reco::TransientTrack& transTrack1,
-                                                                          const reco::TransientTrack& transTrack2) const
+std::pair<reco::VertexCompositeCandidate, double> TrackVertexProducer::fitSV(const reco::Vertex& pv,
+                                                                             const reco::TransientTrack& transTrack1,
+                                                                             const reco::TransientTrack& transTrack2) const
 {
   std::pair<reco::VertexCompositeCandidate, double> result;
   result.first.setPdgId(0);
@@ -236,5 +237,5 @@ std::pair<reco::VertexCompositeCandidate, double> PFVertexProducer::fitSV(const 
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_FWK_MODULE(PFVertexProducer);
+DEFINE_FWK_MODULE(TrackVertexProducer);
 

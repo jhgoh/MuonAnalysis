@@ -20,12 +20,12 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 50000
 
 process.source = cms.Source("PoolSource", fileNames = cms.untracked.vstring())
 process.source.fileNames = [
-    '/store/mc/RunIIFall15MiniAODv2/TTJets_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/MINIAODSIM/PU25nsData2015v1_76X_mcRun2_asymptotic_v12-v1/00000/FAA39206-2ECC-E511-B849-002590DB918A.root',
+    '/store/mc/RunIIFall15DR76/TTJets_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/AODSIM/PU25nsData2015v1_76X_mcRun2_asymptotic_v12-v1/50000/D0188731-42BC-E511-B9C0-02163E00B00F.root',
 ]
 
-process.ksVertex = cms.EDProducer("PFVertexProducer",
-    src = cms.InputTag("packedPFCandidates"),
-    vertex = cms.InputTag("offlineSlimmedPrimaryVertices"),
+process.ksVertex = cms.EDProducer("TrackVertexProducer",
+    src = cms.InputTag("generalTracks"),
+    vertex = cms.InputTag("offlinePrimaryVertices"),
 
     trkMinPt = cms.double(4.0),
     trkMaxEta = cms.double(2.4),
