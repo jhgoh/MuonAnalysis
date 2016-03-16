@@ -206,12 +206,13 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   std::vector<SVFitResult> svs;
   for ( auto itr1 = transTracks.begin(); itr1 != transTracks.end(); ++itr1 ) {
     const reco::Track& track1 = itr1->track();
+    if ( pdgId1_ == pdgId2_ and track1.charge() < 0 ) continue;
     const double e1 = sqrt(mass1_*mass1_ + track1.momentum().mag2());
 
-    for ( auto itr2 = (pdgId1_ == pdgId2_) ? itr1+1 : transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
+    for ( auto itr2 = transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
       if ( itr1 == itr2 ) continue;
-      if ( itr1->charge() == itr2->charge() ) continue;
       const reco::Track& track2 = itr2->track();
+      if ( pdgId1_ == pdgId2_ and track2.charge() > 0 ) continue;
       const double e2 = sqrt(mass2_*mass2_ + track2.momentum().mag2());
 
       const double px = track1.px() + track2.px();
@@ -383,7 +384,6 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
     result.cov = vtxCov;
     result.lxy = rVtxMag;
     result.isValid = true;
-
   } catch ( std::exception& e ) { return result; }
 
   return result;
