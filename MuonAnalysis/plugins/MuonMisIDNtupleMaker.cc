@@ -273,9 +273,8 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     if ( dR1 < 0.3 ) muIdxs1[dR1] = i;
     if ( dR2 < 0.3 ) muIdxs2[dR2] = i;
   }
-  int muIdx1 = -1, muIdx2 = -1;
-  if      ( !muIdxs1.empty() ) muIdx1 = muIdxs1.begin()->second;
-  else if ( !muIdxs2.empty() ) muIdx2 = muIdxs2.begin()->second;
+  int muIdx1 = muIdxs1.empty() ? -1 : muIdx1 = muIdxs1.begin()->second;
+  int muIdx2 = muIdxs2.empty() ? -1 : muIdx2 = muIdxs2.begin()->second;
   // Special care for duplication
   if ( muIdx1 == muIdx2 and muIdx1 != -1 ) {
     const double dR1 = muIdxs1.begin()->first;
