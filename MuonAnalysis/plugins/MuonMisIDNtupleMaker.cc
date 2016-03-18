@@ -229,18 +229,16 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   edm::Handle<reco::MuonCollection> muonHandle;
   event.getByToken(muonToken_, muonHandle);
 
-  std::vector<const reco::GenParticle*> genMuHads;
+  std::vector<reco::GenParticle> genMuHads;
   edm::Handle<reco::GenParticleCollection> genParticleHandle;
   if ( !event.isRealData() ) {
     event.getByToken(genParticleToken_, genParticleHandle);
     for ( auto& p : *genParticleHandle ) {
       if ( p.status() != 1 ) continue;
       const int aid = abs(p.pdgId());
-      if ( p.charge() != 0 and (aid != 13 or aid > 100) ) genMuHads.push_back(&p);
+      if ( p.charge() != 0 and (aid != 13 or aid > 100) ) genMuHads.push_back(p);
     }
   }
-  std::vector<int> genMuHadCategories;
-  for ( auto p : genMuHads ) genMuHadCategories.push_back(genCategory(*p));
 
   // Collect transient tracks
   std::vector<reco::TransientTrack> transTracks;
@@ -334,17 +332,17 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   }
 
   // Match gen muons or hadrons to the SV legs
-  auto genIdxPair = matchTwo(sv.leg1, sv.leg2, *genParticleHandle);
+  auto genIdxPair = matchTwo(sv.leg1, sv.leg2, genMuHads);
   const int genIdx1 = genIdxPair.first, genIdx2 = genIdxPair.second;
   if ( genIdx1 >= 0 ) {
-    const auto& gp = genParticleHandle->at(genIdx1);
+    const auto& gp = genMuHads.at(genIdx1);
     b_gen1 = gp.p4();
     b_genPdgId1 = gp.pdgId();
     b_genType1 = genCategory(gp);
     b_genDR1 = deltaR(gp.p4(), sv.leg1);
   }
   if ( genIdx2 >= 0 ) {
-    const auto& gp = genParticleHandle->at(genIdx2);
+    const auto& gp = genMuHads.at(genIdx2);
     b_gen2 = gp.p4();
     b_genPdgId2 = gp.pdgId();
     b_genType2 = genCategory(gp);
