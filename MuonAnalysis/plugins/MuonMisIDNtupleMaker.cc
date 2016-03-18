@@ -10,9 +10,12 @@
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
+#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/MuonReco/interface/MuonFwd.h"
 #include "DataFormats/MuonReco/interface/MuonSelectors.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 
 #include "TrackingTools/Records/interface/TransientTrackRecord.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
@@ -46,6 +49,8 @@ struct SVFitResult
   double chi2, ndof, lxy;
 };
 
+typedef math::XYZTLorentzVector LV;
+
 class MuonMisIDNtupleMaker : public edm::one::EDAnalyzer<edm::one::SharedResources>
 {
 public:
@@ -58,10 +63,14 @@ private:
                     const reco::TransientTrack& transTrack1,
                     const reco::TransientTrack& transTrack2) const;
   int muonIdBit(const reco::Muon& mu, const reco::Vertex& vertex) const;
+  int genCategory(const reco::GenParticle& p) const;
+  template <typename T>
+  std::pair<int, int> matchTwo(const LV& lv1, const LV& lv2, T& coll) const;
 
-  //const edm::EDGetTokenT<reco::GenParticleCollection> genParticleToken_;
+  edm::EDGetTokenT<reco::GenParticleCollection> genParticleToken_;
   edm::EDGetTokenT<reco::VertexCollection> vertexToken_;
   edm::EDGetTokenT<reco::TrackCollection> trackToken_;
+  edm::EDGetTokenT<pat::PackedCandidateCollection> pfCandToken_;
   edm::EDGetTokenT<reco::MuonCollection> muonToken_;
 
   // Constants for the vertex fit
@@ -84,11 +93,16 @@ private:
   int b_nPV;
 
   double b_mass, b_pt, b_lxy;
+  LV b_track1, b_track2;
 
   int b_muQ1, b_muQ2, b_pdgId1, b_pdgId2;
-  math::XYZTLorentzVector b_mu1, b_mu2, b_track1, b_track2;
+  LV b_mu1, b_mu2;
   int b_muId1, b_muId2;
   double b_muDR1, b_muDR2;
+
+  int b_genPdgId1, b_genPdgId2, b_genType1, b_genType2;
+  LV b_gen1, b_gen2;
+  double b_genDR1, b_genDR2;
 
   TH1D* hN_;
   TH1D* hM_, * hMAll_;
@@ -104,8 +118,10 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   vtxChi2_(pset.getParameter<double>("vtxChi2")),
   vtxSignif_(pset.getParameter<double>("vtxSignif"))
 {
+  genParticleToken_ = consumes<reco::GenParticleCollection>(pset.getParameter<edm::InputTag>("genParticles"));
   vertexToken_ = consumes<reco::VertexCollection>(pset.getParameter<edm::InputTag>("vertex"));
   trackToken_ = consumes<reco::TrackCollection>(pset.getParameter<edm::InputTag>("tracks"));
+  pfCandToken_ = consumes<pat::PackedCandidateCollection>(pset.getParameter<edm::InputTag>("pfCandidates"));
   muonToken_ = consumes<reco::MuonCollection>(pset.getParameter<edm::InputTag>("muons"));
 
   const string vtxType = pset.getParameter<string>("vtxType");
@@ -168,6 +184,15 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   tree_->Branch("mu1", "math::XYZTLorentzVector", &b_mu1);
   tree_->Branch("mu2", "math::XYZTLorentzVector", &b_mu2);
 
+  tree_->Branch("genPdgId1", &b_genPdgId1, "genPdgId1/I");
+  tree_->Branch("genPdgId2", &b_genPdgId2, "genPdgId2/I");
+  tree_->Branch("genType1", &b_genType1, "genType1/I");
+  tree_->Branch("genType2", &b_genType2, "genType2/I");
+  tree_->Branch("genDR1", &b_genDR1, "genDR1/D");
+  tree_->Branch("genDR2", &b_genDR2, "genDR2/D");
+  tree_->Branch("gen1", "math::XYZTLorentzVector", &b_gen1);
+  tree_->Branch("gen2", "math::XYZTLorentzVector", &b_gen2);
+
   hN_ = fs->make<TH1D>("hN", "hN", 100, 0, 100);
   hMAll_ = fs->make<TH1D>("hMAll", "hMAll", 100, vtxMinMass_, vtxMaxMass_);
   hM_ = fs->make<TH1D>("hM", "hM", 100, vtxMinMass_, vtxMaxMass_);
@@ -183,16 +208,19 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   b_nPV = -999;
   b_mass = b_pt = b_lxy = -999;
   b_pdgId1 = b_pdgId2 = -999;
-  b_muQ1 = b_muQ2 = b_muId1 = b_muId2 = -999;
-  b_muDR1 = b_muDR2 = -999;
+  b_muQ1 = b_muQ2 = b_muId1 = b_muId2 = b_muDR1 = b_muDR2 = -999;
+  b_genPdgId1 = b_genPdgId2 = b_genType1 = b_genType2 = b_genDR1 = b_genDR2 = -999;
 
-  b_track1 = b_track2 = b_mu1 = b_mu2 = math::XYZTLorentzVector();
+  b_track1 = b_track2 = b_mu1 = b_mu2 = b_gen1 = b_gen2 = LV();
 
   edm::ESHandle<TransientTrackBuilder> trackBuilder;
   eventSetup.get<TransientTrackRecord>().get("TransientTrackBuilder", trackBuilder);
 
   edm::Handle<reco::TrackCollection> trackHandle;
   event.getByToken(trackToken_, trackHandle);
+
+  edm::Handle<pat::PackedCandidateCollection> pfCandHandle;
+  event.getByToken(pfCandToken_, pfCandHandle);
 
   edm::Handle<reco::VertexCollection> vertexHandle;
   event.getByToken(vertexToken_, vertexHandle);
@@ -201,15 +229,39 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   edm::Handle<reco::MuonCollection> muonHandle;
   event.getByToken(muonToken_, muonHandle);
 
+  std::vector<const reco::GenParticle*> genMuHads;
+  edm::Handle<reco::GenParticleCollection> genParticleHandle;
+  if ( !event.isRealData() ) {
+    event.getByToken(genParticleToken_, genParticleHandle);
+    for ( auto& p : *genParticleHandle ) {
+      if ( p.status() != 1 ) continue;
+      const int aid = abs(p.pdgId());
+      if ( p.charge() != 0 and (aid != 13 or aid > 100) ) genMuHads.push_back(&p);
+    }
+  }
+  std::vector<int> genMuHadCategories;
+  for ( auto p : genMuHads ) genMuHadCategories.push_back(genCategory(*p));
+
   // Collect transient tracks
   std::vector<reco::TransientTrack> transTracks;
-  for ( auto track = trackHandle->begin(); track != trackHandle->end(); ++track ) {
-    if ( track->pt() < trkMinPt_ or std::abs(track->eta()) > trkMaxEta_ ) continue;
-    // Apply basic track quality cuts
-    if ( !track->quality(reco::TrackBase::loose) or
-         track->normalizedChi2() >= 5 or track->numberOfValidHits() < 6 ) continue;
-    auto transTrack = trackBuilder->build(&*track);
-    transTracks.push_back(transTrack);
+  if ( trackHandle.isValid() ) {
+    for ( auto track = trackHandle->begin(); track != trackHandle->end(); ++track ) {
+      if ( track->pt() < trkMinPt_ or std::abs(track->eta()) > trkMaxEta_ ) continue;
+      // Apply basic track quality cuts
+      if ( !track->quality(reco::TrackBase::loose) or
+          track->normalizedChi2() >= 5 or track->numberOfValidHits() < 6 ) continue;
+      auto transTrack = trackBuilder->build(&*track);
+      transTracks.push_back(transTrack);
+    }
+  }
+  else if ( pfCandHandle.isValid() ) {
+    for ( auto cand = pfCandHandle->begin(); cand != pfCandHandle->end(); ++cand ) {
+      if ( cand->pt() < trkMinPt_ or std::abs(cand->eta()) > trkMaxEta_ ) continue;
+
+      auto track = cand->pseudoTrack();
+      auto transTrack = trackBuilder->build(track);
+      transTracks.push_back(transTrack);
+    }
   }
 
   // Collect vertices after the fitting
@@ -264,44 +316,39 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   hM_->Fill(b_mass);
 
   // Match muons to the SV legs
-  std::map<double, int> muIdxs1, muIdxs2;
-  for ( int i=0, n=muonHandle->size(); i<n; ++i ) {
-    const auto& mu = muonHandle->at(i);
-    const double dR1 = deltaR(sv.leg1, mu.p4());
-    const double dR2 = deltaR(sv.leg2, mu.p4());
-
-    if ( dR1 < 0.3 ) muIdxs1[dR1] = i;
-    if ( dR2 < 0.3 ) muIdxs2[dR2] = i;
-  }
-  int muIdx1 = muIdxs1.empty() ? -1 : muIdx1 = muIdxs1.begin()->second;
-  int muIdx2 = muIdxs2.empty() ? -1 : muIdx2 = muIdxs2.begin()->second;
-  // Special care for duplication
-  if ( muIdx1 == muIdx2 and muIdx1 != -1 ) {
-    const double dR1 = muIdxs1.begin()->first;
-    const double dR2 = muIdxs2.begin()->first;
-    if ( dR1 >= dR2 ) {
-      if ( muIdxs1.size() > 1 ) muIdx1 = std::next(muIdxs1.begin())->second;
-      else muIdx1 = -1;
-    }
-    else {
-      if ( muIdxs2.size() > 1 ) muIdx2 = std::next(muIdxs2.begin())->second;
-      else muIdx2 = -1;
-    }
-  }
-
-  if ( muIdx1 >= 0 ) {
-    const auto& mu = muonHandle->at(muIdx1);
+  auto muonIdxPair = matchTwo(sv.leg1, sv.leg2, *muonHandle);
+  const int muonIdx1 = muonIdxPair.first, muonIdx2 = muonIdxPair.second;
+  if ( muonIdx1 >= 0 ) {
+    const auto& mu = muonHandle->at(muonIdx1);
     b_muQ1 = mu.charge();
     b_mu1 = mu.p4();
     b_muId1 = muonIdBit(mu, pv);
     b_muDR1 = deltaR(mu.p4(), sv.leg1);
   }
-  if ( muIdx2 >= 0 ) {
-    const auto& mu = muonHandle->at(muIdx2);
+  if ( muonIdx2 >= 0 ) {
+    const auto& mu = muonHandle->at(muonIdx2);
     b_muQ2 = mu.charge();
     b_mu2 = mu.p4();
     b_muId2 = muonIdBit(mu, pv);
     b_muDR2 = deltaR(mu.p4(), sv.leg2);
+  }
+
+  // Match gen muons or hadrons to the SV legs
+  auto genIdxPair = matchTwo(sv.leg1, sv.leg2, *genParticleHandle);
+  const int genIdx1 = genIdxPair.first, genIdx2 = genIdxPair.second;
+  if ( genIdx1 >= 0 ) {
+    const auto& gp = genParticleHandle->at(genIdx1);
+    b_gen1 = gp.p4();
+    b_genPdgId1 = gp.pdgId();
+    b_genType1 = genCategory(gp);
+    b_genDR1 = deltaR(gp.p4(), sv.leg1);
+  }
+  if ( genIdx2 >= 0 ) {
+    const auto& gp = genParticleHandle->at(genIdx2);
+    b_gen2 = gp.p4();
+    b_genPdgId2 = gp.pdgId();
+    b_genType2 = genCategory(gp);
+    b_genDR2 = deltaR(gp.p4(), sv.leg2);
   }
 
   tree_->Fill();
@@ -383,7 +430,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
     reco::Particle::Point vtx(sv.x(), sv.y(), sv.z());
     const reco::Vertex::CovarianceMatrix vtxCov(sv.covariance());
 
-    const math::XYZTLorentzVector candLVec(mom.x(), mom.y(), mom.z(), candE1+candE2);
+    const LV candLVec(mom.x(), mom.y(), mom.z(), candE1+candE2);
     if ( vtxMinMass_ > candLVec.mass() or vtxMaxMass_ < candLVec.mass() ) return result;
 
     result.p4 = candLVec;
@@ -407,10 +454,46 @@ int MuonMisIDNtupleMaker::muonIdBit(const reco::Muon& mu, const reco::Vertex& vt
   int result = 0;
 
   if ( muon::isLooseMuon(mu)       ) result |= 1<<0;
-  if ( muon::isMediumMuon(mu) ) result |= 1<<1;
+  if ( muon::isMediumMuon(mu)      ) result |= 1<<1;
   if ( muon::isTightMuon(mu, vtx)  ) result |= 1<<2;
 
   return result;
+}
+
+int MuonMisIDNtupleMaker::genCategory(const reco::GenParticle& p) const
+{
+  return 0;
+}
+
+template<typename T>
+std::pair<int, int> MuonMisIDNtupleMaker::matchTwo(const LV& lv1, const LV& lv2, T& coll) const
+{
+  std::map<double, int> idxs1, idxs2;
+  for ( int i=0, n=coll.size(); i<n; ++i ) {
+    const auto& p = coll.at(i);
+    const double dR1 = deltaR(lv1, p.p4());
+    const double dR2 = deltaR(lv2, p.p4());
+
+    if ( dR1 < 0.3 ) idxs1[dR1] = i;
+    if ( dR2 < 0.3 ) idxs2[dR2] = i;
+  }
+  int idx1 = idxs1.empty() ? -1 : idxs1.begin()->second;
+  int idx2 = idxs2.empty() ? -1 : idxs2.begin()->second;
+  // Special care for duplication
+  if ( idx1 == idx2 and idx1 != -1 ) {
+    const double dR1 = idxs1.begin()->first;
+    const double dR2 = idxs2.begin()->first;
+    if ( dR1 >= dR2 ) {
+      if ( idxs1.size() > 1 ) idx1 = std::next(idxs1.begin())->second;
+      else idx1 = -1;
+    }
+    else {
+      if ( idxs2.size() > 1 ) idx2 = std::next(idxs2.begin())->second;
+      else idx2 = -1;
+    }
+  }
+
+  return make_pair(idx1, idx2);
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"
