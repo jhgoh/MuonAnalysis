@@ -128,20 +128,20 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   if ( vtxType == "kshort" ) {
     pdgId1_ = pdgId2_ = 211;
     mass1_ = pionMass; mass2_ = pionMass;
-    vtxMinRawMass_ = 0.40; vtxMaxRawMass_ = 0.60;
-    vtxMinMass_ = 0.43; vtxMaxMass_ = 0.57;
+    vtxMinRawMass_ = 0.35; vtxMaxRawMass_ = 0.65;
+    vtxMinMass_ = 0.40; vtxMaxMass_ = 0.60;
   }
   else if ( vtxType == "phi" ) {
     pdgId1_ = pdgId2_ = 321;
     mass1_ = kaonMass; mass2_ = kaonMass;
-    vtxMinRawMass_ = 0.95; vtxMaxRawMass_ = 1.08;
+    vtxMinRawMass_ = 0.96; vtxMaxRawMass_ = 1.08;
     vtxMinMass_ = 0.98; vtxMaxMass_ = 1.06;
   }
   else if ( vtxType == "lambda" ) {
     pdgId1_ = 2212; pdgId2_ = 211;
     mass1_ = protonMass; mass2_ = pionMass;
-    vtxMinRawMass_ = 1.091; vtxMaxRawMass_ = 1.139;
-    vtxMinMass_ = 1.101; vtxMaxMass_ = 1.129;
+    vtxMinRawMass_ = 1.04; vtxMaxRawMass_ = 1.24;
+    vtxMinMass_ = 1.06; vtxMaxMass_ = 1.22;
   }
   else {
     mass1_ = pset.getParameter<double>("mass1");
@@ -226,7 +226,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   edm::Handle<reco::VertexCollection> vertexHandle;
   event.getByToken(vertexToken_, vertexHandle);
   b_nPV = vertexHandle->size();
-  reco::Vertex pv = vertexHandle->at(0);
+  const reco::Vertex pv = vertexHandle->at(0);
 
   edm::Handle<reco::MuonCollection> muonHandle;
   event.getByToken(muonToken_, muonHandle);
@@ -371,26 +371,26 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
 
     ClosestApproachInRPhi cApp;
     cApp.calculate(ipState1, ipState2);
-    if ( !cApp.status() ) return result;
+    if ( !cApp.status() ) return SVFitResult();
 
     const float dca = std::abs(cApp.distance());
-    if ( dca < 0. or dca > trkDCA_ ) return result;
+    if ( dca < 0. or dca > trkDCA_ ) return SVFitResult();
 
     GlobalPoint cxPt = cApp.crossingPoint();
-    if ( std::hypot(cxPt.x(), cxPt.y()) > 120. or std::abs(cxPt.z()) > 300. ) return result;
+    if ( std::hypot(cxPt.x(), cxPt.y()) > 120. or std::abs(cxPt.z()) > 300. ) return SVFitResult();
 
     TrajectoryStateClosestToPoint caState1 = transTrack1.trajectoryStateClosestToPoint(cxPt);
     TrajectoryStateClosestToPoint caState2 = transTrack2.trajectoryStateClosestToPoint(cxPt);
-    if ( !caState1.isValid() or !caState2.isValid() ) return result;
+    if ( !caState1.isValid() or !caState2.isValid() ) return SVFitResult();
 
     std::vector<reco::TransientTrack> transTracks = {transTrack1, transTrack2};
 
     KalmanVertexFitter fitter(true);
     TransientVertex tsv = fitter.vertex(transTracks);
-    if ( !tsv.isValid() or tsv.totalChiSquared() < 0. ) return result;
+    if ( !tsv.isValid() or tsv.totalChiSquared() < 0. ) return SVFitResult();
 
     reco::Vertex sv = tsv;
-    if ( sv.normalizedChi2() > vtxChi2_ ) return result;
+    if ( sv.normalizedChi2() > vtxChi2_ ) return SVFitResult();
 
     typedef ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3> > SMatrixSym3D;
     typedef ROOT::Math::SVector<double, 3> SVector3;

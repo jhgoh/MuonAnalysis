@@ -9,17 +9,17 @@ ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
     #genParticles = cms.InputTag("packedGenParticles"), ## For the MiniAOD
 
     trkMinPt = cms.double(4.0),
-    trkMaxEta = cms.double(2.4),
+    trkMaxEta = cms.double(2.5),
     trkChi2 = cms.double(5.),
     trkNHit = cms.int32(6),
     trkSignif = cms.double(-5),
     trkDCA = cms.double(1.),
 
     vtxType = cms.string("kshort"),
-    vtxMinLxy = cms.double(.0),
-    vtxMaxLxy = cms.double(4),
+    vtxMinLxy = cms.double(-4),
+    vtxMaxLxy = cms.double(40),
     vtxChi2 = cms.double(7.),
-    vtxSignif = cms.double(.0),
+    vtxSignif = cms.double(-5),
 )
 
 phi = ks.clone(vtxType = cms.string("phi"))
