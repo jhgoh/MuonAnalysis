@@ -67,7 +67,7 @@ private:
   template <typename T>
   std::pair<int, int> matchTwo(const LV& lv1, const LV& lv2, T& coll) const;
 
-  edm::EDGetTokenT<reco::GenParticleCollection> genParticleToken_;
+  //edm::EDGetTokenT<reco::GenParticleCollection> genParticleToken_;
   edm::EDGetTokenT<reco::VertexCollection> vertexToken_;
   edm::EDGetTokenT<reco::TrackCollection> trackToken_;
   edm::EDGetTokenT<pat::PackedCandidateCollection> pfCandToken_;
@@ -89,7 +89,7 @@ private:
   // Trees and histograms
   TTree* tree_;
   int b_run, b_lumi, b_event;
-  double b_genWeight, b_puWeight;
+  //double b_genWeight, b_puWeight;
   int b_nPV;
 
   double b_mass, b_pt, b_lxy;
@@ -100,9 +100,9 @@ private:
   int b_muId1, b_muId2;
   double b_muDR1, b_muDR2;
 
-  int b_genPdgId1, b_genPdgId2, b_genType1, b_genType2;
-  LV b_gen1, b_gen2;
-  double b_genDR1, b_genDR2;
+  //int b_genPdgId1, b_genPdgId2, b_genType1, b_genType2;
+  //LV b_gen1, b_gen2;
+  //double b_genDR1, b_genDR2;
 
   TH1D* hN_;
   TH1D* hM_, * hMAll_;
@@ -118,7 +118,7 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   vtxChi2_(pset.getParameter<double>("vtxChi2")),
   vtxSignif_(pset.getParameter<double>("vtxSignif"))
 {
-  genParticleToken_ = consumes<reco::GenParticleCollection>(pset.getParameter<edm::InputTag>("genParticles"));
+  //genParticleToken_ = consumes<reco::GenParticleCollection>(pset.getParameter<edm::InputTag>("genParticles"));
   vertexToken_ = consumes<reco::VertexCollection>(pset.getParameter<edm::InputTag>("vertex"));
   trackToken_ = consumes<reco::TrackCollection>(pset.getParameter<edm::InputTag>("tracks"));
   pfCandToken_ = consumes<pat::PackedCandidateCollection>(pset.getParameter<edm::InputTag>("pfCandidates"));
@@ -163,8 +163,8 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   tree_->Branch("lumi", &b_lumi, "lumi/I");
   tree_->Branch("event", &b_event, "event/I");
 
-  tree_->Branch("genWeight", &b_genWeight, "genWeight/D");
-  tree_->Branch("puWeight", &b_puWeight, "puWeight/D");
+  //tree_->Branch("genWeight", &b_genWeight, "genWeight/D");
+  //tree_->Branch("puWeight", &b_puWeight, "puWeight/D");
   tree_->Branch("nPV", &b_nPV, "nPV/I");
 
   tree_->Branch("mass", &b_mass, "mass/D");
@@ -184,14 +184,14 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   tree_->Branch("mu1", "math::XYZTLorentzVector", &b_mu1);
   tree_->Branch("mu2", "math::XYZTLorentzVector", &b_mu2);
 
-  tree_->Branch("genPdgId1", &b_genPdgId1, "genPdgId1/I");
-  tree_->Branch("genPdgId2", &b_genPdgId2, "genPdgId2/I");
-  tree_->Branch("genType1", &b_genType1, "genType1/I");
-  tree_->Branch("genType2", &b_genType2, "genType2/I");
-  tree_->Branch("genDR1", &b_genDR1, "genDR1/D");
-  tree_->Branch("genDR2", &b_genDR2, "genDR2/D");
-  tree_->Branch("gen1", "math::XYZTLorentzVector", &b_gen1);
-  tree_->Branch("gen2", "math::XYZTLorentzVector", &b_gen2);
+  //tree_->Branch("genPdgId1", &b_genPdgId1, "genPdgId1/I");
+  //tree_->Branch("genPdgId2", &b_genPdgId2, "genPdgId2/I");
+  //tree_->Branch("genType1", &b_genType1, "genType1/I");
+  //tree_->Branch("genType2", &b_genType2, "genType2/I");
+  //tree_->Branch("genDR1", &b_genDR1, "genDR1/D");
+  //tree_->Branch("genDR2", &b_genDR2, "genDR2/D");
+  //tree_->Branch("gen1", "math::XYZTLorentzVector", &b_gen1);
+  //tree_->Branch("gen2", "math::XYZTLorentzVector", &b_gen2);
 
   hN_ = fs->make<TH1D>("hN", "hN", 100, 0, 100);
   hMAll_ = fs->make<TH1D>("hMAll", "hMAll", 100, vtxMinMass_, vtxMaxMass_);
@@ -204,14 +204,15 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   b_lumi = event.id().luminosityBlock();
   b_event = event.id().event();
 
-  b_genWeight = b_puWeight = -999;
+  //b_genWeight = b_puWeight = -999;
   b_nPV = -999;
   b_mass = b_pt = b_lxy = -999;
   b_pdgId1 = b_pdgId2 = -999;
   b_muQ1 = b_muQ2 = b_muId1 = b_muId2 = b_muDR1 = b_muDR2 = -999;
-  b_genPdgId1 = b_genPdgId2 = b_genType1 = b_genType2 = b_genDR1 = b_genDR2 = -999;
+  //b_genPdgId1 = b_genPdgId2 = b_genType1 = b_genType2 = b_genDR1 = b_genDR2 = -999;
 
-  b_track1 = b_track2 = b_mu1 = b_mu2 = b_gen1 = b_gen2 = LV();
+  b_track1 = b_track2 = b_mu1 = b_mu2 = LV();
+  //b_gen1 = b_gen2 = LV();
 
   edm::ESHandle<TransientTrackBuilder> trackBuilder;
   eventSetup.get<TransientTrackRecord>().get("TransientTrackBuilder", trackBuilder);
@@ -224,11 +225,13 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
 
   edm::Handle<reco::VertexCollection> vertexHandle;
   event.getByToken(vertexToken_, vertexHandle);
+  b_nPV = vertexHandle->size();
   reco::Vertex pv = vertexHandle->at(0);
 
   edm::Handle<reco::MuonCollection> muonHandle;
   event.getByToken(muonToken_, muonHandle);
 
+/*
   std::vector<reco::GenParticle> genMuHads;
   edm::Handle<reco::GenParticleCollection> genParticleHandle;
   if ( !event.isRealData() ) {
@@ -239,6 +242,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       if ( p.charge() != 0 and (aid != 13 or aid > 100) ) genMuHads.push_back(p);
     }
   }
+*/
 
   // Collect transient tracks
   std::vector<reco::TransientTrack> transTracks;
@@ -276,8 +280,8 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       const double e2 = sqrt(mass2_*mass2_ + track2.momentum().mag2());
 
       const double px = track1.px() + track2.px();
-      const double py = track1.px() + track2.px();
-      const double pz = track1.px() + track2.px();
+      const double py = track1.py() + track2.py();
+      const double pz = track1.pz() + track2.pz();
       const double p2 = px*px + py*py + pz*pz;
       const double e = e1+e2;
 
@@ -331,6 +335,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     b_muDR2 = deltaR(mu.p4(), sv.leg2);
   }
 
+/*
   // Match gen muons or hadrons to the SV legs
   auto genIdxPair = matchTwo(sv.leg1, sv.leg2, genMuHads);
   const int genIdx1 = genIdxPair.first, genIdx2 = genIdxPair.second;
@@ -348,6 +353,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     b_genType2 = genCategory(gp);
     b_genDR2 = deltaR(gp.p4(), sv.leg2);
   }
+*/
 
   tree_->Fill();
 }
