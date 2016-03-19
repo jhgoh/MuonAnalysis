@@ -23,29 +23,7 @@ process.source.fileNames = [
     '/store/mc/RunIIFall15DR76/TTJets_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/AODSIM/PU25nsData2015v1_76X_mcRun2_asymptotic_v12-v1/50000/D0188731-42BC-E511-B9C0-02163E00B00F.root',
 ]
 
-process.ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
-    muons = cms.InputTag("muons"),
-    tracks = cms.InputTag("generalTracks"),
-    vertex = cms.InputTag("offlinePrimaryVertices"),
-    #genParticles = cms.InputTag("genParticles"),
-    pfCandidates = cms.InputTag("packedCandidates"), ## For the MiniAOD
-    #genParticles = cms.InputTag("packedGenParticles"), ## For the MiniAOD
-
-    trkMinPt = cms.double(4.0),
-    trkMaxEta = cms.double(2.4),
-    trkChi2 = cms.double(5.),
-    trkNHit = cms.int32(6),
-    trkSignif = cms.double(-5),
-    trkDCA = cms.double(1.),
-
-    vtxType = cms.string("kshort"),
-    vtxMinLxy = cms.double(.0),
-    vtxMaxLxy = cms.double(4),
-    vtxChi2 = cms.double(7.),
-    vtxSignif = cms.double(.0),
-)
-process.phi = process.ks.clone(vtxType = cms.string("phi"))
-process.lamb = process.ks.clone(vtxType = cms.string("lambda"))
+process.load("SKKU.MuonAnalysis.muonMisIDNtupleMaker_cff")
 
 process.TFileService = cms.Service("TFileService",
     fileName = cms.string("hist.root"),
