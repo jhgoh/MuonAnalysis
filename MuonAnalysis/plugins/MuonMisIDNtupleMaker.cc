@@ -276,6 +276,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     for ( auto itr2 = transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
       if ( itr1 == itr2 ) continue;
       const reco::Track& track2 = itr2->track();
+      if ( track1.charge() == track2.charge() ) continue;
       if ( pdgId1_ == pdgId2_ and track2.charge() > 0 ) continue;
       const double e2 = sqrt(mass2_*mass2_ + track2.momentum().mag2());
 
@@ -400,7 +401,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
 
     const double rVtxMag = ROOT::Math::Mag(distanceVectorXY);
     const double sigmaRvtxMag = sqrt(ROOT::Math::Similarity(totalCov, distanceVectorXY)) / rVtxMag;
-    if( rVtxMag < vtxMinLxy_ or rVtxMag > vtxMaxLxy_ or rVtxMag / sigmaRvtxMag < vtxSignif_ ) return result;
+    if( rVtxMag < vtxMinLxy_ or rVtxMag > vtxMaxLxy_ or rVtxMag / sigmaRvtxMag < vtxSignif_ ) return SVFitResult();
 
     //SVector3 distanceVector3D(sv.x() - pvx, sv.y() - pvy, sv.z() - pvz);
     //const double rVtxMag3D = ROOT::Math::Mag(distanceVector3D);
@@ -416,14 +417,14 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
     }
     else {
       auto refTracks = tsv.refittedTracks();
-      if ( refTracks.size() < 2 ) return result;
+      if ( refTracks.size() < 2 ) return SVFitResult();
 
       q1 =  refTracks.at(0).trajectoryStateClosestToPoint(vtxPos).charge();
       q2 =  refTracks.at(1).trajectoryStateClosestToPoint(vtxPos).charge();
       mom1 = refTracks.at(0).trajectoryStateClosestToPoint(vtxPos).momentum();
       mom2 = refTracks.at(1).trajectoryStateClosestToPoint(vtxPos).momentum();
     }
-    if ( mom1.mag() <= 0 or mom2.mag() <= 0 ) return result;
+    if ( mom1.mag() <= 0 or mom2.mag() <= 0 ) return SVFitResult();
     const GlobalVector mom = mom1+mom2;
 
     const double candE1 = hypot(mom1.mag(), mass1_);
@@ -435,7 +436,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
     const reco::Vertex::CovarianceMatrix vtxCov(sv.covariance());
 
     const LV candLVec(mom.x(), mom.y(), mom.z(), candE1+candE2);
-    if ( vtxMinMass_ > candLVec.mass() or vtxMaxMass_ < candLVec.mass() ) return result;
+    if ( vtxMinMass_ > candLVec.mass() or vtxMaxMass_ < candLVec.mass() ) return SVFitResult();
 
     result.p4 = candLVec;
     result.vertex = vtx;
@@ -448,7 +449,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
     result.cov = vtxCov;
     result.lxy = rVtxMag;
     result.isValid = true;
-  } catch ( std::exception& e ) { return result; }
+  } catch ( std::exception& e ) { return SVFitResult(); }
 
   return result;
 }
