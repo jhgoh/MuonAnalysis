@@ -46,7 +46,7 @@ struct SVFitResult
   int q1, q2;
   reco::Particle::Point vertex;
   reco::Vertex::CovarianceMatrix cov;
-  double chi2, ndof, lxy;
+  double chi2, ndof, lxy, vz;
 };
 
 typedef math::XYZTLorentzVector LV;
@@ -358,6 +358,8 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
   try {
     auto ipState1 = transTrack1.impactPointTSCP().theState();
     auto ipState2 = transTrack2.impactPointTSCP().theState();
+    if ( std::abs(ipState1.position().z()-pv.z()) > 20 or
+         std::abs(ipState2.position().z()-pv.z()) > 20 ) return SVFitResult();
 
     ClosestApproachInRPhi cApp;
     cApp.calculate(ipState1, ipState2);
@@ -438,6 +440,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
     result.ndof = vtxNdof;
     result.cov = vtxCov;
     result.lxy = rVtxMag;
+    result.vz = std::abs(pv.z()-vtx.z());
     result.isValid = true;
   } catch ( std::exception& e ) { return SVFitResult(); }
 
