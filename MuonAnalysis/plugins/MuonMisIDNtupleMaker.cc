@@ -92,7 +92,7 @@ private:
   //double b_genWeight, b_puWeight;
   int b_nPV;
 
-  double b_mass, b_pt, b_lxy;
+  double b_mass, b_pt, b_lxy, b_vz;
   LV b_track1, b_track2;
 
   int b_muQ1, b_muQ2, b_pdgId1, b_pdgId2;
@@ -170,6 +170,7 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   tree_->Branch("mass", &b_mass, "mass/D");
   tree_->Branch("pt"  , &b_pt  , "pt/D"  );
   tree_->Branch("lxy" , &b_lxy , "lxy/D" );
+  tree_->Branch("vz"  , &b_vz  , "vz/D"  );
   tree_->Branch("pdgId1", &b_pdgId1, "pdgId1/I");
   tree_->Branch("pdgId2", &b_pdgId2, "pdgId2/I");
   tree_->Branch("track1", "math::XYZTLorentzVector", &b_track1);
@@ -302,6 +303,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     b_mass = sv.p4.mass();
     b_pt = sv.p4.pt();
     b_lxy = sv.lxy;
+    b_vz = sv.vz;
     b_pdgId1 = sv.q1*pdgId1_;
     b_pdgId2 = sv.q2*pdgId2_;
     b_track1 = sv.leg1;
@@ -358,8 +360,8 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
   try {
     auto ipState1 = transTrack1.impactPointTSCP().theState();
     auto ipState2 = transTrack2.impactPointTSCP().theState();
-    if ( std::abs(ipState1.position().z()-pv.z()) > 20 or
-         std::abs(ipState2.position().z()-pv.z()) > 20 ) return SVFitResult();
+    //if ( std::abs(ipState1.position().z()-pv.z()) > 1 or
+    //     std::abs(ipState2.position().z()-pv.z()) > 1 ) return SVFitResult();
 
     ClosestApproachInRPhi cApp;
     cApp.calculate(ipState1, ipState2);
