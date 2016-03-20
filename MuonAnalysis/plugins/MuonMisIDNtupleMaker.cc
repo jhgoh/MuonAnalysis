@@ -246,7 +246,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     std::vector<const reco::GenParticle*> resonances;
     event.getByToken(genParticleToken_, genParticleHandle);
     for ( auto& p : *genParticleHandle ) {
-      if ( abs(p.pdgId()) != pdgId_ ) {
+      if ( abs(p.pdgId()) == pdgId_ ) {
         bool isDuplicated = false;
         for ( int i=0, n=p.numberOfDaughters(); i<n; ++i ) {
           if ( pdgId_ == std::abs(p.daughter(i)->pdgId()) ) { isDuplicated = true; break; }

@@ -29,9 +29,6 @@ process.TFileService = cms.Service("TFileService",
     fileName = cms.string("hist.root"),
 )
 
-process.ks.doGenFilter = True
-process.phi.doGenFilter = True
-process.lamb.doGenFilter = True
 process.p = cms.Path(
     process.ks + process.phi + process.lamb
 )
