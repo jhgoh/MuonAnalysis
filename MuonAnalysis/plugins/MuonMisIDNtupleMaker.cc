@@ -67,7 +67,7 @@ private:
   template <typename T>
   std::pair<int, int> matchTwo(const LV& lv1, const LV& lv2, T& coll) const;
 
-  //edm::EDGetTokenT<reco::GenParticleCollection> genParticleToken_;
+  edm::EDGetTokenT<reco::GenParticleCollection> genParticleToken_;
   edm::EDGetTokenT<reco::VertexCollection> vertexToken_;
   edm::EDGetTokenT<reco::TrackCollection> trackToken_;
   edm::EDGetTokenT<pat::PackedCandidateCollection> pfCandToken_;
@@ -77,6 +77,9 @@ private:
   const double pionMass = 0.1396;
   const double kaonMass = 0.4937;
   const double protonMass = 0.9383;
+
+  const bool doGenFilter_;
+  int pdgId_;
 
   const double trkMinPt_, trkMaxEta_;
   double vtxMinRawMass_, vtxMaxRawMass_;
@@ -109,6 +112,7 @@ private:
 };
 
 MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
+  doGenFilter_(pset.getUntrackedParameter<bool>("doGenFilter", false)),
   trkMinPt_(pset.getParameter<double>("trkMinPt")),
   trkMaxEta_(pset.getParameter<double>("trkMaxEta")),
   vtxMinLxy_(pset.getParameter<double>("vtxMinLxy")),
@@ -118,7 +122,7 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   vtxChi2_(pset.getParameter<double>("vtxChi2")),
   vtxSignif_(pset.getParameter<double>("vtxSignif"))
 {
-  //genParticleToken_ = consumes<reco::GenParticleCollection>(pset.getParameter<edm::InputTag>("genParticles"));
+  genParticleToken_ = consumes<reco::GenParticleCollection>(pset.getParameter<edm::InputTag>("genParticles"));
   vertexToken_ = consumes<reco::VertexCollection>(pset.getParameter<edm::InputTag>("vertex"));
   trackToken_ = consumes<reco::TrackCollection>(pset.getParameter<edm::InputTag>("tracks"));
   pfCandToken_ = consumes<pat::PackedCandidateCollection>(pset.getParameter<edm::InputTag>("pfCandidates"));
@@ -126,24 +130,28 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
 
   const string vtxType = pset.getParameter<string>("vtxType");
   if ( vtxType == "kshort" ) {
+    pdgId_ = 310;
     pdgId1_ = pdgId2_ = 211;
     mass1_ = pionMass; mass2_ = pionMass;
     vtxMinRawMass_ = 0.35; vtxMaxRawMass_ = 0.65;
     vtxMinMass_ = 0.40; vtxMaxMass_ = 0.60;
   }
   else if ( vtxType == "phi" ) {
+    pdgId_ = 333;
     pdgId1_ = pdgId2_ = 321;
     mass1_ = kaonMass; mass2_ = kaonMass;
     vtxMinRawMass_ = 0.96; vtxMaxRawMass_ = 1.08;
     vtxMinMass_ = 0.98; vtxMaxMass_ = 1.06;
   }
   else if ( vtxType == "lambda" ) {
+    pdgId_ = 3122;
     pdgId1_ = 2212; pdgId2_ = 211;
     mass1_ = protonMass; mass2_ = pionMass;
     vtxMinRawMass_ = 1.04; vtxMaxRawMass_ = 1.24;
     vtxMinMass_ = 1.06; vtxMaxMass_ = 1.22;
   }
   else {
+    pdgId_ = pset.getParameter<int>("pdgId");
     mass1_ = pset.getParameter<double>("mass1");
     mass2_ = pset.getParameter<double>("mass2");
     pdgId1_ = pset.getParameter<int>("pdgId1");
@@ -231,18 +239,28 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   edm::Handle<reco::MuonCollection> muonHandle;
   event.getByToken(muonToken_, muonHandle);
 
-/*
-  std::vector<reco::GenParticle> genMuHads;
+  //std::vector<reco::GenParticle> genMuHads;
   edm::Handle<reco::GenParticleCollection> genParticleHandle;
   if ( !event.isRealData() ) {
+    //bool hasResonance = false;
+    std::vector<const reco::GenParticle*> resonances;
     event.getByToken(genParticleToken_, genParticleHandle);
     for ( auto& p : *genParticleHandle ) {
-      if ( p.status() != 1 ) continue;
-      const int aid = abs(p.pdgId());
-      if ( p.charge() != 0 and (aid != 13 or aid > 100) ) genMuHads.push_back(p);
+      if ( abs(p.pdgId()) != pdgId_ ) {
+        bool isDuplicated = false;
+        for ( int i=0, n=p.numberOfDaughters(); i<n; ++i ) {
+          if ( pdgId_ == std::abs(p.daughter(i)->pdgId()) ) { isDuplicated = true; break; }
+        }
+        if ( isDuplicated ) continue;
+        resonances.push_back(&p);
+      }
+
+      //if ( p.status() != 1 ) continue;
+      //const int aid = abs(p.pdgId());
+      //if ( p.charge() != 0 and (aid != 13 or aid > 100) ) genMuHads.push_back(p);
     }
+    if ( doGenFilter_ and resonances.empty() ) return;
   }
-*/
 
   // Collect transient tracks
   std::vector<reco::TransientTrack> transTracks;
