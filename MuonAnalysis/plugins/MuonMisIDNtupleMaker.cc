@@ -105,7 +105,7 @@ private:
   //double b_genDR1, b_genDR2;
 
   TH1D* hN_;
-  TH1D* hM_, * hMAll_;
+  TH1D* hM_;
 };
 
 MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
@@ -194,7 +194,6 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   //tree_->Branch("gen2", "math::XYZTLorentzVector", &b_gen2);
 
   hN_ = fs->make<TH1D>("hN", "hN", 100, 0, 100);
-  hMAll_ = fs->make<TH1D>("hMAll", "hMAll", 100, vtxMinMass_, vtxMaxMass_);
   hM_ = fs->make<TH1D>("hM", "hM", 100, vtxMinMass_, vtxMaxMass_);
 }
 
@@ -298,65 +297,56 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   hN_->Fill(svs.size());
 
   // Loop over the SV fit results and find best one in the event
-  SVFitResult sv;
-  for ( auto& isv : svs ) {
-    hMAll_->Fill(isv.p4.mass());
+  for ( const auto& sv : svs ) {
+    // Fill variables for the best SV
+    b_mass = sv.p4.mass();
+    b_pt = sv.p4.pt();
+    b_lxy = sv.lxy;
+    b_pdgId1 = sv.q1*pdgId1_;
+    b_pdgId2 = sv.q2*pdgId2_;
+    b_track1 = sv.leg1;
+    b_track2 = sv.leg2;
+    hM_->Fill(b_mass);
 
-    if ( !sv.isValid or isv.p4.pt() > sv.p4.pt() ) {
-      sv = isv;
+    // Match muons to the SV legs
+    auto muonIdxPair = matchTwo(sv.leg1, sv.leg2, *muonHandle);
+    const int muonIdx1 = muonIdxPair.first, muonIdx2 = muonIdxPair.second;
+    if ( muonIdx1 >= 0 ) {
+      const auto& mu = muonHandle->at(muonIdx1);
+      b_muQ1 = mu.charge();
+      b_mu1 = mu.p4();
+      b_muId1 = muonIdBit(mu, pv);
+      b_muDR1 = deltaR(mu.p4(), sv.leg1);
     }
-  }
-  if ( !sv.isValid ) return;
-
-  // Fill variables for the best SV
-  b_mass = sv.p4.mass();
-  b_pt = sv.p4.pt();
-  b_lxy = sv.lxy;
-  b_pdgId1 = sv.q1*pdgId1_;
-  b_pdgId2 = sv.q2*pdgId2_;
-  b_track1 = sv.leg1;
-  b_track2 = sv.leg2;
-  hM_->Fill(b_mass);
-
-  // Match muons to the SV legs
-  auto muonIdxPair = matchTwo(sv.leg1, sv.leg2, *muonHandle);
-  const int muonIdx1 = muonIdxPair.first, muonIdx2 = muonIdxPair.second;
-  if ( muonIdx1 >= 0 ) {
-    const auto& mu = muonHandle->at(muonIdx1);
-    b_muQ1 = mu.charge();
-    b_mu1 = mu.p4();
-    b_muId1 = muonIdBit(mu, pv);
-    b_muDR1 = deltaR(mu.p4(), sv.leg1);
-  }
-  if ( muonIdx2 >= 0 ) {
-    const auto& mu = muonHandle->at(muonIdx2);
-    b_muQ2 = mu.charge();
-    b_mu2 = mu.p4();
-    b_muId2 = muonIdBit(mu, pv);
-    b_muDR2 = deltaR(mu.p4(), sv.leg2);
-  }
+    if ( muonIdx2 >= 0 ) {
+      const auto& mu = muonHandle->at(muonIdx2);
+      b_muQ2 = mu.charge();
+      b_mu2 = mu.p4();
+      b_muId2 = muonIdBit(mu, pv);
+      b_muDR2 = deltaR(mu.p4(), sv.leg2);
+    }
 
 /*
-  // Match gen muons or hadrons to the SV legs
-  auto genIdxPair = matchTwo(sv.leg1, sv.leg2, genMuHads);
-  const int genIdx1 = genIdxPair.first, genIdx2 = genIdxPair.second;
-  if ( genIdx1 >= 0 ) {
-    const auto& gp = genMuHads.at(genIdx1);
-    b_gen1 = gp.p4();
-    b_genPdgId1 = gp.pdgId();
-    b_genType1 = genCategory(gp);
-    b_genDR1 = deltaR(gp.p4(), sv.leg1);
-  }
-  if ( genIdx2 >= 0 ) {
-    const auto& gp = genMuHads.at(genIdx2);
-    b_gen2 = gp.p4();
-    b_genPdgId2 = gp.pdgId();
-    b_genType2 = genCategory(gp);
-    b_genDR2 = deltaR(gp.p4(), sv.leg2);
-  }
+    // Match gen muons or hadrons to the SV legs
+    auto genIdxPair = matchTwo(sv.leg1, sv.leg2, genMuHads);
+    const int genIdx1 = genIdxPair.first, genIdx2 = genIdxPair.second;
+    if ( genIdx1 >= 0 ) {
+      const auto& gp = genMuHads.at(genIdx1);
+      b_gen1 = gp.p4();
+      b_genPdgId1 = gp.pdgId();
+      b_genType1 = genCategory(gp);
+      b_genDR1 = deltaR(gp.p4(), sv.leg1);
+    }
+    if ( genIdx2 >= 0 ) {
+      const auto& gp = genMuHads.at(genIdx2);
+      b_gen2 = gp.p4();
+      b_genPdgId2 = gp.pdgId();
+      b_genType2 = genCategory(gp);
+      b_genDR2 = deltaR(gp.p4(), sv.leg2);
+    }
 */
-
-  tree_->Fill();
+    tree_->Fill();
+  }
 }
 
 SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
