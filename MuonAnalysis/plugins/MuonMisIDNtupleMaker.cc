@@ -93,7 +93,7 @@ private:
   TTree* tree_;
   int b_run, b_lumi, b_event;
   //double b_genWeight, b_puWeight;
-  int b_nPV;
+  int b_nPV, b_nSV;
 
   double b_mass, b_pt, b_lxy, b_vz;
   LV b_track1, b_track2;
@@ -103,6 +103,7 @@ private:
   int b_muId1, b_muId2;
   double b_muDR1, b_muDR2;
 
+  int b_nGenSV;
   //int b_genPdgId1, b_genPdgId2, b_genType1, b_genType2;
   //LV b_gen1, b_gen2;
   //double b_genDR1, b_genDR2;
@@ -174,6 +175,7 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   //tree_->Branch("genWeight", &b_genWeight, "genWeight/D");
   //tree_->Branch("puWeight", &b_puWeight, "puWeight/D");
   tree_->Branch("nPV", &b_nPV, "nPV/I");
+  tree_->Branch("nSV", &b_nSV, "nSV/I");
 
   tree_->Branch("mass", &b_mass, "mass/D");
   tree_->Branch("pt"  , &b_pt  , "pt/D"  );
@@ -193,6 +195,7 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   tree_->Branch("mu1", "math::XYZTLorentzVector", &b_mu1);
   tree_->Branch("mu2", "math::XYZTLorentzVector", &b_mu2);
 
+  tree_->Branch("nGenSV", &b_nGenSV, "nGenSV/I");
   //tree_->Branch("genPdgId1", &b_genPdgId1, "genPdgId1/I");
   //tree_->Branch("genPdgId2", &b_genPdgId2, "genPdgId2/I");
   //tree_->Branch("genType1", &b_genType1, "genType1/I");
@@ -212,8 +215,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   b_lumi = event.id().luminosityBlock();
   b_event = event.id().event();
 
-  //b_genWeight = b_puWeight = -999;
-  b_nPV = -999;
+  //b_genWeight = b_puWeight = 0;
 
   edm::ESHandle<TransientTrackBuilder> trackBuilder;
   eventSetup.get<TransientTrackRecord>().get("TransientTrackBuilder", trackBuilder);
@@ -232,6 +234,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   edm::Handle<reco::MuonCollection> muonHandle;
   event.getByToken(muonToken_, muonHandle);
 
+  b_nGenSV = 0;
   //std::vector<reco::GenParticle> genMuHads;
   edm::Handle<reco::GenParticleCollection> genParticleHandle;
   if ( !event.isRealData() ) {
@@ -253,6 +256,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       //if ( p.charge() != 0 and (aid != 13 or aid > 100) ) genMuHads.push_back(p);
     }
     if ( doGenFilter_ and resonances.empty() ) return;
+    b_nGenSV = resonances.size();
   }
 
   // Collect transient tracks
@@ -308,6 +312,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       svs.push_back(res);
     }
   }
+  b_nSV = svs.size();
   hN_->Fill(svs.size());
 
   // Loop over the SV fit results to fill tree
@@ -322,7 +327,8 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     b_track2 = sv.leg2;
 
     // Match muons to the SV legs
-    b_muQ1 = b_muQ2 = b_muId1 = b_muId2 = b_muDR1 = b_muDR2 = -999;
+    b_muQ1 = b_muQ2 = b_muId1 = b_muId2 = 0;
+    b_muDR1 = b_muDR2 = -1;
     b_mu1 = b_mu2 = LV();
     auto muonIdxPair = matchTwo(sv.leg1, sv.leg2, *muonHandle);
     const int muonIdx1 = muonIdxPair.first, muonIdx2 = muonIdxPair.second;
@@ -344,7 +350,8 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
 /*
     // Match gen muons or hadrons to the SV legs
     //b_gen1 = b_gen2 = LV();
-    //b_genPdgId1 = b_genPdgId2 = b_genType1 = b_genType2 = b_genDR1 = b_genDR2 = -999;
+    //b_genPdgId1 = b_genPdgId2 = b_genType1 = b_genType2 = 0;
+    //b_genDR1 = b_genDR2 = -1;
     auto genIdxPair = matchTwo(sv.leg1, sv.leg2, genMuHads);
     const int genIdx1 = genIdxPair.first, genIdx2 = genIdxPair.second;
     if ( genIdx1 >= 0 ) {
