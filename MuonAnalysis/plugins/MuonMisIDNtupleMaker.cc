@@ -242,6 +242,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     std::vector<const reco::GenParticle*> resonances;
     event.getByToken(genParticleToken_, genParticleHandle);
     for ( auto& p : *genParticleHandle ) {
+      if ( !p.isLastCopy() ) continue;
       if ( abs(p.pdgId()) == pdgId_ ) {
         bool isDuplicated = false;
         for ( int i=0, n=p.numberOfDaughters(); i<n; ++i ) {
@@ -382,6 +383,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
   SVFitResult result;
 
   try {
+    if ( !transTrack1.impactPointTSCP().isValid() or !transTrack2.impactPointTSCP().isValid() ) return result;
     auto ipState1 = transTrack1.impactPointTSCP().theState();
     auto ipState2 = transTrack2.impactPointTSCP().theState();
     //if ( std::abs(ipState1.position().z()-pv.z()) > 1 or
@@ -389,26 +391,27 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
 
     ClosestApproachInRPhi cApp;
     cApp.calculate(ipState1, ipState2);
-    if ( !cApp.status() ) return SVFitResult();
+    if ( !cApp.status() ) return result;
 
     const float dca = std::abs(cApp.distance());
-    if ( dca < 0. or dca > trkDCA_ ) return SVFitResult();
+    if ( dca < 0. or dca > trkDCA_ ) return result;
 
     GlobalPoint cxPt = cApp.crossingPoint();
-    if ( std::hypot(cxPt.x(), cxPt.y()) > 120. or std::abs(cxPt.z()) > 300. ) return SVFitResult();
+    if ( std::hypot(cxPt.x(), cxPt.y()) > 120. or std::abs(cxPt.z()) > 300. ) return result;
 
     TrajectoryStateClosestToPoint caState1 = transTrack1.trajectoryStateClosestToPoint(cxPt);
     TrajectoryStateClosestToPoint caState2 = transTrack2.trajectoryStateClosestToPoint(cxPt);
-    if ( !caState1.isValid() or !caState2.isValid() ) return SVFitResult();
+    if ( !caState1.isValid() or !caState2.isValid() ) return result;
+    if ( caState1.momentum().dot(caState2.momentum()) < 0 ) return result;
 
     std::vector<reco::TransientTrack> transTracks = {transTrack1, transTrack2};
 
     KalmanVertexFitter fitter(true);
     TransientVertex tsv = fitter.vertex(transTracks);
-    if ( !tsv.isValid() or tsv.totalChiSquared() < 0. ) return SVFitResult();
+    if ( !tsv.isValid() or tsv.totalChiSquared() < 0. ) return result;
 
     reco::Vertex sv = tsv;
-    if ( sv.normalizedChi2() > vtxChi2_ ) return SVFitResult();
+    if ( sv.normalizedChi2() > vtxChi2_ ) return result;
 
     typedef ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3> > SMatrixSym3D;
     typedef ROOT::Math::SVector<double, 3> SVector3;
@@ -419,7 +422,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
 
     const double rVtxMag = ROOT::Math::Mag(distanceVectorXY);
     const double sigmaRvtxMag = sqrt(ROOT::Math::Similarity(totalCov, distanceVectorXY)) / rVtxMag;
-    if( rVtxMag < vtxMinLxy_ or rVtxMag > vtxMaxLxy_ or rVtxMag / sigmaRvtxMag < vtxSignif_ ) return SVFitResult();
+    if( rVtxMag < vtxMinLxy_ or rVtxMag > vtxMaxLxy_ or rVtxMag / sigmaRvtxMag < vtxSignif_ ) return result;
 
     //SVector3 distanceVector3D(sv.x() - pvx, sv.y() - pvy, sv.z() - pvz);
     //const double rVtxMag3D = ROOT::Math::Mag(distanceVector3D);
@@ -435,14 +438,14 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
     }
     else {
       auto refTracks = tsv.refittedTracks();
-      if ( refTracks.size() < 2 ) return SVFitResult();
+      if ( refTracks.size() < 2 ) return result;
 
       q1 =  refTracks.at(0).trajectoryStateClosestToPoint(vtxPos).charge();
       q2 =  refTracks.at(1).trajectoryStateClosestToPoint(vtxPos).charge();
       mom1 = refTracks.at(0).trajectoryStateClosestToPoint(vtxPos).momentum();
       mom2 = refTracks.at(1).trajectoryStateClosestToPoint(vtxPos).momentum();
     }
-    if ( mom1.mag() <= 0 or mom2.mag() <= 0 ) return SVFitResult();
+    if ( mom1.mag() <= 0 or mom2.mag() <= 0 ) return result;
     const GlobalVector mom = mom1+mom2;
 
     const double candE1 = hypot(mom1.mag(), mass1_);
@@ -454,7 +457,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
     const reco::Vertex::CovarianceMatrix vtxCov(sv.covariance());
 
     const LV candLVec(mom.x(), mom.y(), mom.z(), candE1+candE2);
-    if ( vtxMinMass_ > candLVec.mass() or vtxMaxMass_ < candLVec.mass() ) return SVFitResult();
+    if ( vtxMinMass_ > candLVec.mass() or vtxMaxMass_ < candLVec.mass() ) return result;
 
     result.p4 = candLVec;
     result.vertex = vtx;
