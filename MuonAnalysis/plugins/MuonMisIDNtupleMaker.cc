@@ -214,13 +214,6 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
 
   //b_genWeight = b_puWeight = -999;
   b_nPV = -999;
-  b_mass = b_pt = b_lxy = -999;
-  b_pdgId1 = b_pdgId2 = -999;
-  b_muQ1 = b_muQ2 = b_muId1 = b_muId2 = b_muDR1 = b_muDR2 = -999;
-  //b_genPdgId1 = b_genPdgId2 = b_genType1 = b_genType2 = b_genDR1 = b_genDR2 = -999;
-
-  b_track1 = b_track2 = b_mu1 = b_mu2 = LV();
-  //b_gen1 = b_gen2 = LV();
 
   edm::ESHandle<TransientTrackBuilder> trackBuilder;
   eventSetup.get<TransientTrackRecord>().get("TransientTrackBuilder", trackBuilder);
@@ -286,16 +279,18 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
 
   // Collect vertices after the fitting
   std::vector<SVFitResult> svs;
+  const bool isSameFlav = (pdgId1_ == pdgId2_);
   for ( auto itr1 = transTracks.begin(); itr1 != transTracks.end(); ++itr1 ) {
     const reco::Track& track1 = itr1->track();
-    if ( pdgId1_ == pdgId2_ and track1.charge() < 0 ) continue;
+    if ( isSameFlav and track1.charge() < 0 ) continue;
     const double e1 = sqrt(mass1_*mass1_ + track1.momentum().mag2());
 
     for ( auto itr2 = transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
       if ( itr1 == itr2 ) continue;
       const reco::Track& track2 = itr2->track();
       if ( track1.charge() == track2.charge() ) continue;
-      if ( pdgId1_ == pdgId2_ and track2.charge() > 0 ) continue;
+      if ( std::abs(deltaPhi(track1.phi(), track2.phi())) > 3.14 ) continue;
+      if ( isSameFlav and track2.charge() > 0 ) continue;
       const double e2 = sqrt(mass2_*mass2_ + track2.momentum().mag2());
 
       const double px = track1.px() + track2.px();
@@ -315,9 +310,8 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   }
   hN_->Fill(svs.size());
 
-  // Loop over the SV fit results and find best one in the event
+  // Loop over the SV fit results to fill tree
   for ( const auto& sv : svs ) {
-    // Fill variables for the best SV
     b_mass = sv.p4.mass();
     b_pt = sv.p4.pt();
     b_lxy = sv.lxy;
@@ -326,9 +320,10 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     b_pdgId2 = sv.q2*pdgId2_;
     b_track1 = sv.leg1;
     b_track2 = sv.leg2;
-    hM_->Fill(b_mass);
 
     // Match muons to the SV legs
+    b_muQ1 = b_muQ2 = b_muId1 = b_muId2 = b_muDR1 = b_muDR2 = -999;
+    b_mu1 = b_mu2 = LV();
     auto muonIdxPair = matchTwo(sv.leg1, sv.leg2, *muonHandle);
     const int muonIdx1 = muonIdxPair.first, muonIdx2 = muonIdxPair.second;
     if ( muonIdx1 >= 0 ) {
@@ -348,6 +343,8 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
 
 /*
     // Match gen muons or hadrons to the SV legs
+    //b_gen1 = b_gen2 = LV();
+    //b_genPdgId1 = b_genPdgId2 = b_genType1 = b_genType2 = b_genDR1 = b_genDR2 = -999;
     auto genIdxPair = matchTwo(sv.leg1, sv.leg2, genMuHads);
     const int genIdx1 = genIdxPair.first, genIdx2 = genIdxPair.second;
     if ( genIdx1 >= 0 ) {
@@ -365,6 +362,8 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       b_genDR2 = deltaR(gp.p4(), sv.leg2);
     }
 */
+
+    hM_->Fill(b_mass);
     tree_->Fill();
   }
 }
@@ -474,6 +473,7 @@ int MuonMisIDNtupleMaker::muonIdBit(const reco::Muon& mu, const reco::Vertex& vt
   if ( muon::isLooseMuon(mu)       ) result |= 1<<0;
   if ( muon::isMediumMuon(mu)      ) result |= 1<<1;
   if ( muon::isTightMuon(mu, vtx)  ) result |= 1<<2;
+  if ( muon::isSoftMuon(mu, vtx)   ) result |= 1<<3;
 
   return result;
 }
