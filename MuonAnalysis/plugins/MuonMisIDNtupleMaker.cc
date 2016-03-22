@@ -82,10 +82,12 @@ private:
   const bool applyGenFilter_, useBeamSpot_;
   int pdgId_;
 
-  const double trkMinPt_, trkMaxEta_;
   double vtxMinRawMass_, vtxMaxRawMass_;
   double vtxMinMass_, vtxMaxMass_, vtxMinLxy_, vtxMaxLxy_;
-  const double trkChi2_, trkDCA_, vtxChi2_, vtxSignif_;
+  const double trkMinPt_, trkMaxEta_;
+  const int trkNHit_;
+  const double trkChi2_, trkSigXY_, trkSigZ_;
+  const double vtxDCA_, vtxChi2_, vtxSignif_;
 
   double mass1_, mass2_;
   int pdgId1_, pdgId2_;
@@ -116,12 +118,15 @@ private:
 MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   applyGenFilter_(pset.getUntrackedParameter<bool>("applyGenFilter", false)),
   useBeamSpot_(pset.getUntrackedParameter<bool>("useBeamSpot", false)),
-  trkMinPt_(pset.getUntrackedParameter<double>("trkMinPt")),
-  trkMaxEta_(pset.getUntrackedParameter<double>("trkMaxEta")),
   vtxMinLxy_(pset.getUntrackedParameter<double>("vtxMinLxy")),
   vtxMaxLxy_(pset.getUntrackedParameter<double>("vtxMaxLxy")),
+  trkMinPt_(pset.getUntrackedParameter<double>("trkMinPt")),
+  trkMaxEta_(pset.getUntrackedParameter<double>("trkMaxEta")),
+  trkNHit_(pset.getUntrackedParameter<int>("trkNHit")),
   trkChi2_(pset.getUntrackedParameter<double>("trkChi2")),
-  trkDCA_(pset.getUntrackedParameter<double>("trkDCA")),
+  trkSigXY_(pset.getUntrackedParameter<double>("trkSigXY")),
+  trkSigZ_(pset.getUntrackedParameter<double>("trkSigZ")),
+  vtxDCA_(pset.getUntrackedParameter<double>("vtxDCA")),
   vtxChi2_(pset.getUntrackedParameter<double>("vtxChi2")),
   vtxSignif_(pset.getUntrackedParameter<double>("vtxSignif"))
 {
@@ -210,6 +215,9 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
 
   hN_ = fs->make<TH1D>("hN", "hN", 100, 0, 100);
   hM_ = fs->make<TH1D>("hM", "hM", 100, vtxMinMass_, vtxMaxMass_);
+
+  hN_->SetMinimum(0);
+  hM_->SetMinimum(0);
 }
 
 void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetup& eventSetup)
@@ -274,17 +282,20 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   std::vector<reco::TransientTrack> transTracks;
   if ( trackHandle.isValid() ) {
     for ( auto track = trackHandle->begin(); track != trackHandle->end(); ++track ) {
-      if ( track->pt() < trkMinPt_ or std::abs(track->eta()) > trkMaxEta_ ) continue;
+      if ( track->pt() < 0.35 or std::abs(track->eta()) > trkMaxEta_ ) continue;
       // Apply basic track quality cuts
       if ( !track->quality(reco::TrackBase::loose) or
-          track->normalizedChi2() >= 5 or track->numberOfValidHits() < 6 ) continue;
+          track->normalizedChi2() >= trkChi2_ or track->numberOfValidHits() < trkNHit_ ) continue;
+      const double ipSigXY = std::abs(track->dxy(pvPos)/track->dxyError());
+      const double ipSigZ = std::abs(track->dz(pvPos)/track->dzError());
+      if ( ipSigXY < trkSigXY_ or ipSigZ < trkSigZ_  ) continue;
       auto transTrack = trackBuilder->build(&*track);
       transTracks.push_back(transTrack);
     }
   }
   else if ( pfCandHandle.isValid() ) {
     for ( auto cand = pfCandHandle->begin(); cand != pfCandHandle->end(); ++cand ) {
-      if ( cand->pt() < trkMinPt_ or std::abs(cand->eta()) > trkMaxEta_ ) continue;
+      if ( cand->pt() < 0.35 or std::abs(cand->eta()) > trkMaxEta_ ) continue;
 
       auto track = cand->pseudoTrack();
       auto transTrack = trackBuilder->build(track);
@@ -306,6 +317,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       if ( track1.charge() == track2.charge() ) continue;
       if ( std::abs(deltaPhi(track1.phi(), track2.phi())) > 3.14 ) continue;
       if ( isSameFlav and track2.charge() > 0 ) continue;
+      if ( track1.pt() < trkMinPt_ and track2.pt() < trkMinPt_ ) continue; // at least one track should pass minimum pt cut
       const double e2 = sqrt(mass2_*mass2_ + track2.momentum().mag2());
 
       const double px = track1.px() + track2.px();
@@ -404,7 +416,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
     if ( !cApp.status() ) return result;
 
     const float dca = std::abs(cApp.distance());
-    if ( dca < 0. or dca > trkDCA_ ) return result;
+    if ( dca < 0. or dca > vtxDCA_ ) return result;
 
     GlobalPoint cxPt = cApp.crossingPoint();
     if ( std::hypot(cxPt.x(), cxPt.y()) > 120. or std::abs(cxPt.z()) > 300. ) return result;
