@@ -59,7 +59,7 @@ public:
   void analyze(const edm::Event& event, const edm::EventSetup& eventSetup) override;
 
 private:
-  SVFitResult fitSV(const reco::Vertex& pv,
+  SVFitResult fitSV(const reco::Particle::Point& pvPos, const reco::Vertex::CovarianceMatrix& pvCov,
                     const reco::TransientTrack& transTrack1,
                     const reco::TransientTrack& transTrack2) const;
   int muonIdBit(const reco::Muon& mu, const reco::Vertex& vertex) const;
@@ -72,13 +72,14 @@ private:
   edm::EDGetTokenT<reco::TrackCollection> trackToken_;
   edm::EDGetTokenT<pat::PackedCandidateCollection> pfCandToken_;
   edm::EDGetTokenT<reco::MuonCollection> muonToken_;
+  edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
 
   // Constants for the vertex fit
   const double pionMass = 0.1396;
   const double kaonMass = 0.4937;
   const double protonMass = 0.9383;
 
-  const bool doGenFilter_;
+  const bool applyGenFilter_, useBeamSpot_;
   int pdgId_;
 
   const double trkMinPt_, trkMaxEta_;
@@ -113,23 +114,25 @@ private:
 };
 
 MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
-  doGenFilter_(pset.getUntrackedParameter<bool>("doGenFilter", false)),
-  trkMinPt_(pset.getParameter<double>("trkMinPt")),
-  trkMaxEta_(pset.getParameter<double>("trkMaxEta")),
-  vtxMinLxy_(pset.getParameter<double>("vtxMinLxy")),
-  vtxMaxLxy_(pset.getParameter<double>("vtxMaxLxy")),
-  trkChi2_(pset.getParameter<double>("trkChi2")),
-  trkDCA_(pset.getParameter<double>("trkDCA")),
-  vtxChi2_(pset.getParameter<double>("vtxChi2")),
-  vtxSignif_(pset.getParameter<double>("vtxSignif"))
+  applyGenFilter_(pset.getUntrackedParameter<bool>("applyGenFilter", false)),
+  useBeamSpot_(pset.getUntrackedParameter<bool>("useBeamSpot", false)),
+  trkMinPt_(pset.getUntrackedParameter<double>("trkMinPt")),
+  trkMaxEta_(pset.getUntrackedParameter<double>("trkMaxEta")),
+  vtxMinLxy_(pset.getUntrackedParameter<double>("vtxMinLxy")),
+  vtxMaxLxy_(pset.getUntrackedParameter<double>("vtxMaxLxy")),
+  trkChi2_(pset.getUntrackedParameter<double>("trkChi2")),
+  trkDCA_(pset.getUntrackedParameter<double>("trkDCA")),
+  vtxChi2_(pset.getUntrackedParameter<double>("vtxChi2")),
+  vtxSignif_(pset.getUntrackedParameter<double>("vtxSignif"))
 {
   genParticleToken_ = consumes<reco::GenParticleCollection>(pset.getParameter<edm::InputTag>("genParticles"));
   vertexToken_ = consumes<reco::VertexCollection>(pset.getParameter<edm::InputTag>("vertex"));
+  beamSpotToken_ = consumes<reco::BeamSpot>(edm::InputTag("offlineBeamSpot"));
   trackToken_ = consumes<reco::TrackCollection>(pset.getParameter<edm::InputTag>("tracks"));
-  pfCandToken_ = consumes<pat::PackedCandidateCollection>(pset.getParameter<edm::InputTag>("pfCandidates"));
+  pfCandToken_ = consumes<pat::PackedCandidateCollection>(edm::InputTag("pfCandidates"));
   muonToken_ = consumes<reco::MuonCollection>(pset.getParameter<edm::InputTag>("muons"));
 
-  const string vtxType = pset.getParameter<string>("vtxType");
+  const string vtxType = pset.getUntrackedParameter<string>("vtxType");
   if ( vtxType == "kshort" ) {
     pdgId_ = 310;
     pdgId1_ = pdgId2_ = 211;
@@ -152,15 +155,15 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
     vtxMinMass_ = 1.06; vtxMaxMass_ = 1.22;
   }
   else {
-    pdgId_ = pset.getParameter<int>("pdgId");
-    mass1_ = pset.getParameter<double>("mass1");
-    mass2_ = pset.getParameter<double>("mass2");
-    pdgId1_ = pset.getParameter<int>("pdgId1");
-    pdgId2_ = pset.getParameter<int>("pdgId2");
-    vtxMinRawMass_ = pset.getParameter<double>("minRawMass");
-    vtxMaxRawMass_ = pset.getParameter<double>("maxRawMass");
-    vtxMinMass_ = pset.getParameter<double>("minMass");
-    vtxMaxMass_ = pset.getParameter<double>("maxMass");
+    pdgId_ = pset.getUntrackedParameter<int>("pdgId");
+    mass1_ = pset.getUntrackedParameter<double>("mass1");
+    mass2_ = pset.getUntrackedParameter<double>("mass2");
+    pdgId1_ = pset.getUntrackedParameter<int>("pdgId1");
+    pdgId2_ = pset.getUntrackedParameter<int>("pdgId2");
+    vtxMinRawMass_ = pset.getUntrackedParameter<double>("minRawMass");
+    vtxMaxRawMass_ = pset.getUntrackedParameter<double>("maxRawMass");
+    vtxMinMass_ = pset.getUntrackedParameter<double>("minMass");
+    vtxMaxMass_ = pset.getUntrackedParameter<double>("maxMass");
   }
 
   usesResource("TFileService");
@@ -231,6 +234,13 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   b_nPV = vertexHandle->size();
   const reco::Vertex pv = vertexHandle->at(0);
 
+  edm::Handle<reco::BeamSpot> beamSpotHandle;
+  event.getByToken(beamSpotToken_, beamSpotHandle);
+  const reco::BeamSpot& beamSpot = *beamSpotHandle;
+
+  const reco::Particle::Point pvPos = useBeamSpot_ ? beamSpot.position() : pv.position();
+  const reco::Vertex::CovarianceMatrix pvCov = useBeamSpot_ ? beamSpot.covariance3D() : pv.covariance();
+
   edm::Handle<reco::MuonCollection> muonHandle;
   event.getByToken(muonToken_, muonHandle);
 
@@ -256,7 +266,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       //const int aid = abs(p.pdgId());
       //if ( p.charge() != 0 and (aid != 13 or aid > 100) ) genMuHads.push_back(p);
     }
-    if ( doGenFilter_ and resonances.empty() ) return;
+    if ( applyGenFilter_ and resonances.empty() ) return;
     b_nGenSV = resonances.size();
   }
 
@@ -307,7 +317,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       const double rawMass = sqrt(e*e - p2);
       if ( rawMass < vtxMinRawMass_ or rawMass > vtxMaxRawMass_ ) continue;
 
-      auto res = fitSV(pv, *itr1, *itr2);
+      auto res = fitSV(pvPos, pvCov, *itr1, *itr2);
       if ( !res.isValid ) continue;
 
       svs.push_back(res);
@@ -376,7 +386,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   }
 }
 
-SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
+SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, const reco::Vertex::CovarianceMatrix& pvCov,
                                         const reco::TransientTrack& transTrack1,
                                         const reco::TransientTrack& transTrack2) const
 {
@@ -417,8 +427,8 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
     typedef ROOT::Math::SVector<double, 3> SVector3;
 
     GlobalPoint vtxPos(sv.x(), sv.y(), sv.z());
-    SMatrixSym3D totalCov = pv.covariance() + sv.covariance();
-    SVector3 distanceVectorXY(sv.x() - pv.x(), sv.y() - pv.y(), 0.);
+    SMatrixSym3D totalCov = pvCov + sv.covariance();
+    SVector3 distanceVectorXY(sv.x() - pvPos.x(), sv.y() - pvPos.y(), 0.);
 
     const double rVtxMag = ROOT::Math::Mag(distanceVectorXY);
     const double sigmaRvtxMag = sqrt(ROOT::Math::Similarity(totalCov, distanceVectorXY)) / rVtxMag;
@@ -469,7 +479,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Vertex& pv,
     result.ndof = vtxNdof;
     result.cov = vtxCov;
     result.lxy = rVtxMag;
-    result.vz = std::abs(pv.z()-vtx.z());
+    result.vz = std::abs(pvPos.z()-vtx.z());
     result.isValid = true;
   } catch ( std::exception& e ) { return SVFitResult(); }
 
