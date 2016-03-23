@@ -14,7 +14,7 @@ config.section_("Data")
 config.Data.publication  = False
 config.Data.inputDataset = "/TT_TuneCUETP8M1_13TeV-powheg-pythia8/RunIIFall15DR76-PU25nsData2015v1_76X_mcRun2_asymptotic_v12_ext3-v1/AODSIM"
 config.Data.splitting = "FileBased"
-config.Data.unitsPerJob = 100
+config.Data.unitsPerJob = 50
 
 config.section_("Site")
 # Where the output files will be transmitted to
