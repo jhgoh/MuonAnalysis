@@ -12,22 +12,22 @@ ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
     applyGenFilter = cms.untracked.bool(False),
     useBeamSpot = cms.untracked.bool(True),
 
-    trkMinPt = cms.untracked.double(4.0),
-    trkMaxEta = cms.untracked.double(2.5),
-    trkChi2 = cms.untracked.double(10.),
-    trkNHit = cms.untracked.int32(7),
-    trkSigXY = cms.untracked.double(2),
-    trkSigZ = cms.untracked.double(-1),
+    minTrkPt = cms.untracked.double(4.0),
+    maxTrkEta = cms.untracked.double(2.5),
+    maxTrkChi2 = cms.untracked.double(10.),
+    minTrkNHit = cms.untracked.int32(7),
+    minTrkSigXY = cms.untracked.double(2),
+    minTrkSigZ = cms.untracked.double(-1),
 
-    vtxDCA = cms.untracked.double(1.),
+    maxVtxDCA = cms.untracked.double(1.),
 
     vtxType = cms.untracked.string("kshort"),
-    vtxMinLxy = cms.untracked.double(-4),
-    vtxMaxLxy = cms.untracked.double(40),
-    vtxChi2 = cms.untracked.double(7.),
-    vtxSignif = cms.untracked.double(-5),
+    minVtxLxy = cms.untracked.double(-4),
+    maxVtxLxy = cms.untracked.double(40),
+    maxVtxChi2 = cms.untracked.double(7.),
+    minVtxSignif = cms.untracked.double(-5),
 )
 
-phi = ks.clone(vtxType = cms.untracked.string("phi"), trkSigXY = cms.untracked.double(0))
+phi = ks.clone(vtxType = cms.untracked.string("phi"), minTrkSigXY = cms.untracked.double(-999),)
 lamb = ks.clone(vtxType = cms.untracked.string("lambda"))
 
