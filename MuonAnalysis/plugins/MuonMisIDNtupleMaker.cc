@@ -42,8 +42,8 @@ struct SVFitResult
   SVFitResult():isValid(false) {}
 
   bool isValid;
-  reco::Candidate::LorentzVector p4, leg1, leg2;
-  int q1, q2;
+  reco::Candidate::LorentzVector p4, leg1, leg2, leg3;
+  int q1, q2, q3;
   reco::Particle::Point vertex;
   reco::Vertex::CovarianceMatrix cov;
   double chi2, ndof, lxy, vz;
@@ -62,10 +62,14 @@ private:
   SVFitResult fitSV(const reco::Particle::Point& pvPos, const reco::Vertex::CovarianceMatrix& pvCov,
                     const reco::TransientTrack& transTrack1,
                     const reco::TransientTrack& transTrack2) const;
+  SVFitResult fitSV(const reco::Particle::Point& pvPos, const reco::Vertex::CovarianceMatrix& pvCov,
+                    const reco::TransientTrack& transTrack1,
+                    const reco::TransientTrack& transTrack2,
+                    const reco::TransientTrack& transTrack3) const;
   int muonIdBit(const reco::Muon& mu, const reco::Vertex& vertex) const;
   int genCategory(const reco::GenParticle& p) const;
-  template <typename T>
-  std::pair<int, int> matchTwo(const LV& lv1, const LV& lv2, T& coll) const;
+  template <typename T1, typename T2>
+  std::vector<int> matchByDR(const T1& etas, const T1& phis, T2& coll) const;
 
   edm::EDGetTokenT<reco::GenParticleCollection> genParticleToken_;
   edm::EDGetTokenT<reco::VertexCollection> vertexToken_;
@@ -75,6 +79,7 @@ private:
   edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
 
   // Constants for the vertex fit
+  const double muonMass = 0.1057;
   const double pionMass = 0.1396;
   const double kaonMass = 0.4937;
   const double protonMass = 0.9383;
@@ -89,8 +94,8 @@ private:
   const double cut_maxTrkChi2_, cut_minTrkSigXY_, cut_minTrkSigZ_;
   const double cut_maxVtxDCA_, cut_maxVtxChi2_, cut_minVtxSignif_;
 
-  double mass1_, mass2_;
-  int pdgId1_, pdgId2_;
+  double mass1_, mass2_, mass3_;
+  int pdgId1_, pdgId2_, pdgId3_;
 
   // Trees and histograms
   typedef std::vector<int> vint;
@@ -138,6 +143,7 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   muonToken_ = consumes<reco::MuonCollection>(pset.getParameter<edm::InputTag>("muons"));
 
   const string vtxType = pset.getUntrackedParameter<string>("vtxType");
+  pdgId3_ = 0;
   if ( vtxType == "kshort" ) {
     pdgId_ = 310;
     pdgId1_ = pdgId2_ = 211;
@@ -159,19 +165,35 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
     cut_minVtxRawMass_ = 1.04; cut_maxVtxRawMass_ = 1.24;
     cut_minVtxMass_ = 1.06; cut_maxVtxMass_ = 1.22;
   }
-  else if ( vtxType == "d0" ) {
+  else if ( vtxType == "D0" ) {
     pdgId_ = 421;
     pdgId1_ = 321; pdgId2_ = 211;
     mass1_ = kaonMass; mass2_ = pionMass;
     cut_minVtxRawMass_ = 1.6; cut_maxVtxRawMass_ = 2.1;
     cut_minVtxMass_ = 1.7; cut_maxVtxMass_ = 2.0;
   }
+  else if ( vtxType == "D+" ) {
+    pdgId_ = 421;
+    pdgId1_ = 321; pdgId2_ = 211; pdgId3_ = 211;
+    mass1_ = kaonMass; mass2_ = pionMass; mass3_ = pionMass;
+    cut_minVtxRawMass_ = 1.6; cut_maxVtxRawMass_ = 2.1;
+    cut_minVtxMass_ = 1.7; cut_maxVtxMass_ = 2.0;
+  }
+  else if ( vtxType == "B+" ) {
+    pdgId_ = 521;
+    pdgId1_ = 321; pdgId2_ = 13; pdgId3_ = 13;
+    mass1_ = kaonMass; mass2_ = muonMass; mass3_ = muonMass;
+    cut_minVtxRawMass_ = 5.0; cut_maxVtxRawMass_ = 5.5;
+    cut_minVtxMass_ = 5.1; cut_maxVtxMass_ = 5.4;
+  }
   else {
     pdgId_ = pset.getUntrackedParameter<int>("pdgId");
     mass1_ = pset.getUntrackedParameter<double>("mass1");
     mass2_ = pset.getUntrackedParameter<double>("mass2");
+    mass3_ = pset.getUntrackedParameter<double>("mass3", 0);
     pdgId1_ = pset.getUntrackedParameter<int>("pdgId1");
     pdgId2_ = pset.getUntrackedParameter<int>("pdgId2");
+    pdgId3_ = pset.getUntrackedParameter<int>("pdgId2", 0);
     cut_minVtxRawMass_ = pset.getUntrackedParameter<double>("minRawMass");
     cut_maxVtxRawMass_ = pset.getUntrackedParameter<double>("maxRawMass");
     cut_minVtxMass_ = pset.getUntrackedParameter<double>("minMass");
@@ -313,34 +335,75 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
 
   // Collect vertices after the fitting
   std::vector<SVFitResult> svs;
-  const bool isSameFlav = (pdgId1_ == pdgId2_);
-  for ( auto itr1 = transTracks.begin(); itr1 != transTracks.end(); ++itr1 ) {
-    const reco::Track& track1 = itr1->track();
-    if ( isSameFlav and track1.charge() < 0 ) continue;
-    const double e1 = sqrt(mass1_*mass1_ + track1.momentum().mag2());
+  if ( pdgId3_ == 0 ) { // V->TT case
+    const bool isSameFlav = (pdgId1_ == pdgId2_);
+    for ( auto itr1 = transTracks.begin(); itr1 != transTracks.end(); ++itr1 ) {
+      const reco::Track& track1 = itr1->track();
+      if ( isSameFlav and track1.charge() < 0 ) continue;
+      const double e1 = sqrt(mass1_*mass1_ + track1.momentum().mag2());
 
-    for ( auto itr2 = transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
-      if ( itr1 == itr2 ) continue;
-      const reco::Track& track2 = itr2->track();
-      if ( track1.charge() == track2.charge() ) continue;
-      if ( std::abs(deltaPhi(track1.phi(), track2.phi())) > 3.14 ) continue;
-      if ( isSameFlav and track2.charge() > 0 ) continue;
-      if ( track1.pt() < cut_minTrkPt_ and track2.pt() < cut_minTrkPt_ ) continue; // at least one track should pass minimum pt cut
-      const double e2 = sqrt(mass2_*mass2_ + track2.momentum().mag2());
+      for ( auto itr2 = transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
+        if ( itr1 == itr2 ) continue;
+        const reco::Track& track2 = itr2->track();
+        if ( track1.charge() == track2.charge() ) continue;
+        if ( std::abs(deltaPhi(track1.phi(), track2.phi())) > 3.14 ) continue;
+        if ( isSameFlav and track2.charge() > 0 ) continue;
+        if ( track1.pt() < cut_minTrkPt_ and track2.pt() < cut_minTrkPt_ ) continue; // at least one track should pass minimum pt cut
+        const double e2 = sqrt(mass2_*mass2_ + track2.momentum().mag2());
 
-      const double px = track1.px() + track2.px();
-      const double py = track1.py() + track2.py();
-      const double pz = track1.pz() + track2.pz();
-      const double p2 = px*px + py*py + pz*pz;
-      const double e = e1+e2;
+        const double px = track1.px() + track2.px();
+        const double py = track1.py() + track2.py();
+        const double pz = track1.pz() + track2.pz();
+        const double p2 = px*px + py*py + pz*pz;
+        const double e = e1+e2;
 
-      const double rawMass = sqrt(e*e - p2);
-      if ( rawMass < cut_minVtxRawMass_ or rawMass > cut_maxVtxRawMass_ ) continue;
+        const double rawMass = sqrt(e*e - p2);
+        if ( rawMass < cut_minVtxRawMass_ or rawMass > cut_maxVtxRawMass_ ) continue;
 
-      auto res = fitSV(pvPos, pvCov, *itr1, *itr2);
-      if ( !res.isValid ) continue;
+        auto res = fitSV(pvPos, pvCov, *itr1, *itr2);
+        if ( !res.isValid ) continue;
 
-      svs.push_back(res);
+        svs.push_back(res);
+      }
+    }
+  }
+  else { // V->TTT three body decay case
+    // Works only for no-tertiory vertex cases. ex) D0->Kpipi or B+->JpsiK+
+    // Assume track2 and track3 are same type - K(pi,pi) for D0, K(mu,mu) for B+
+    assert(pdgId2_ == pdgId3_);
+    for ( auto itr1 = transTracks.begin(); itr1 != transTracks.end(); ++itr1 ) {
+      const reco::Track& track1 = itr1->track();
+      const double e1 = sqrt(mass1_*mass1_ + track1.momentum().mag2());
+
+      for ( auto itr2 = transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
+        if ( itr1 == itr2 ) continue;
+        const reco::Track& track2 = itr2->track();
+        if ( track2.charge() < 0 ) continue;
+        const double e2 = sqrt(mass2_*mass2_ + track2.momentum().mag2());
+
+        for ( auto itr3 = transTracks.begin(); itr3 != transTracks.end(); ++itr3 ) {
+          if ( itr1 == itr3 or itr2 == itr3 ) continue;
+          const reco::Track& track3 = itr3->track();
+          if ( track3.charge() > 0 ) continue;
+          if ( track1.pt() < cut_minTrkPt_ and track2.pt() < cut_minTrkPt_ and track3.pt() < cut_minTrkPt_ ) continue;
+
+          const double e3 = sqrt(mass3_*mass3_ + track3.momentum().mag2());
+
+          const double px = track1.px() + track2.px() + track3.px();
+          const double py = track1.py() + track2.py() + track3.py();
+          const double pz = track1.pz() + track2.pz() + track3.pz();
+          const double p2 = px*px + py*py + pz*pz;
+          const double e = e1+e2+e3;
+
+          const double rawMass = sqrt(e*e - p2);
+          if ( rawMass < cut_minVtxRawMass_ or rawMass > cut_maxVtxRawMass_ ) continue;
+
+          auto res = fitSV(pvPos, pvCov, *itr1, *itr2, *itr3);
+          if ( !res.isValid ) continue;
+
+          svs.push_back(res);
+        }
+      }
     }
   }
   b_nSV = svs.size();
@@ -358,27 +421,39 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     *b_trk_pt = {float(sv.leg1.pt()), float(sv.leg2.pt())};
     *b_trk_eta = {float(sv.leg1.eta()), float(sv.leg2.eta())};
     *b_trk_phi = {float(sv.leg1.phi()), float(sv.leg2.phi())};
+    if ( pdgId3_ != 0 ) {
+      b_trk_pdgId->push_back(sv.q3*pdgId3_);
+      b_trk_pt->push_back(sv.leg3.pt());
+      b_trk_eta->push_back(sv.leg3.eta());
+      b_trk_phi->push_back(sv.leg3.phi());
+    }
 
     // Match muons to the SV legs
-    *b_mu_q = {0, 0};
-    *b_mu_id = {0, 0};
-    *b_mu_dR = {-1, -1};
-    *b_mu_pt = {0, 0};
-    auto muonIdxPair = matchTwo(sv.leg1, sv.leg2, *muonHandle);
-    const int muonIdx1 = muonIdxPair.first, muonIdx2 = muonIdxPair.second;
-    if ( muonIdx1 >= 0 ) {
-      const auto& mu = muonHandle->at(muonIdx1);
+    auto muMatch = matchByDR(*b_trk_eta, *b_trk_phi, *muonHandle);
+    *b_mu_q = pdgId3_ == 0 ? vint({0, 0}) : vint({0, 0, 0});
+    *b_mu_id = pdgId3_ == 0 ? vint({0, 0}) : vint({0, 0, 0});
+    *b_mu_dR = pdgId3_ == 0 ? vfloat({-1, -1}) : vfloat({-1, -1, -1});
+    *b_mu_pt = pdgId3_ == 0 ? vfloat({0, 0}) : vfloat({0, 0, 0});
+    if ( muMatch[0] >= 0 ) {
+      const auto& mu = muonHandle->at(muMatch[0]);
       b_mu_q->at(0) = mu.charge();
       b_mu_pt->at(0) = mu.pt();
       b_mu_id->at(0) = muonIdBit(mu, pv);
       b_mu_dR->at(0) = deltaR(mu.p4(), sv.leg1);
     }
-    if ( muonIdx2 >= 0 ) {
-      const auto& mu = muonHandle->at(muonIdx2);
+    if ( muMatch[1] >= 0 ) {
+      const auto& mu = muonHandle->at(muMatch[1]);
       b_mu_q->at(1) = mu.charge();
       b_mu_pt->at(1) = mu.pt();
       b_mu_id->at(1) = muonIdBit(mu, pv);
       b_mu_dR->at(1) = deltaR(mu.p4(), sv.leg1);
+    }
+    if ( pdgId3_ != 0 and muMatch[2] >= 0 ) {
+      const auto& mu = muonHandle->at(muMatch[2]);
+      b_mu_q->at(2) = mu.charge();
+      b_mu_pt->at(2) = mu.pt();
+      b_mu_id->at(2) = muonIdBit(mu, pv);
+      b_mu_dR->at(2) = deltaR(mu.p4(), sv.leg1);
     }
 
     // Match gen muons or hadrons to the SV legs
@@ -389,27 +464,6 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       if ( dR < minDR ) { matchedGen = x; minDR = dR; }
     }
     b_gen_dR = matchedGen ? minDR : -1;
-/*
-    //b_gen1 = b_gen2 = LV();
-    //b_genPdgId1 = b_genPdgId2 = b_genType1 = b_genType2 = 0;
-    //b_genDR1 = b_genDR2 = -1;
-    auto genIdxPair = matchTwo(sv.leg1, sv.leg2, genMuHads);
-    const int genIdx1 = genIdxPair.first, genIdx2 = genIdxPair.second;
-    if ( genIdx1 >= 0 ) {
-      const auto& gp = genMuHads.at(genIdx1);
-      b_gen1 = gp.p4();
-      b_genPdgId1 = gp.pdgId();
-      b_genType1 = genCategory(gp);
-      b_genDR1 = deltaR(gp.p4(), sv.leg1);
-    }
-    if ( genIdx2 >= 0 ) {
-      const auto& gp = genMuHads.at(genIdx2);
-      b_gen2 = gp.p4();
-      b_genPdgId2 = gp.pdgId();
-      b_genType2 = genCategory(gp);
-      b_genDR2 = deltaR(gp.p4(), sv.leg2);
-    }
-*/
 
     hM_->Fill(b_vtx_mass);
     tree_->Fill();
@@ -516,6 +570,134 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
   return result;
 }
 
+SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, const reco::Vertex::CovarianceMatrix& pvCov,
+                                        const reco::TransientTrack& transTrack1,
+                                        const reco::TransientTrack& transTrack2,
+                                        const reco::TransientTrack& transTrack3) const
+{
+  SVFitResult result;
+
+  try {
+    if ( !transTrack1.impactPointTSCP().isValid() or
+         !transTrack2.impactPointTSCP().isValid() or
+         !transTrack3.impactPointTSCP().isValid() ) return result;
+    auto ipState1 = transTrack1.impactPointTSCP().theState();
+    auto ipState2 = transTrack2.impactPointTSCP().theState();
+    auto ipState3 = transTrack2.impactPointTSCP().theState();
+    //if ( std::abs(ipState1.position().z()-pv.z()) > 1 or
+    //     std::abs(ipState2.position().z()-pv.z()) > 1 ) return SVFitResult();
+
+    ClosestApproachInRPhi cApp12, cApp23, cApp13;
+    cApp12.calculate(ipState1, ipState2);
+    cApp23.calculate(ipState2, ipState3);
+    cApp13.calculate(ipState1, ipState3);
+    if ( !cApp12.status() or !cApp23.status() or !cApp13.status() ) return result;
+
+    const float dca12 = std::abs(cApp12.distance());
+    const float dca23 = std::abs(cApp23.distance());
+    const float dca13 = std::abs(cApp13.distance());
+    if ( dca12 < 0. or dca12 > cut_maxVtxDCA_ or
+         dca23 < 0. or dca23 > cut_maxVtxDCA_ or
+         dca13 < 0. or dca13 > cut_maxVtxDCA_ ) return result;
+
+    const GlobalPoint cxPt12 = cApp12.crossingPoint();
+    const GlobalPoint cxPt23 = cApp23.crossingPoint();
+    const GlobalPoint cxPt13 = cApp13.crossingPoint();
+    if ( std::hypot(cxPt12.x(), cxPt12.y()) > 120. or std::abs(cxPt12.z()) > 300. or
+         std::hypot(cxPt23.x(), cxPt23.y()) > 120. or std::abs(cxPt23.z()) > 300. or
+         std::hypot(cxPt13.x(), cxPt13.y()) > 120. or std::abs(cxPt13.z()) > 300. ) return result;
+    // FIXME: approximate crossing point as an average of 3 crossing points
+    const GlobalPoint cxPt((cxPt12.x()+cxPt23.x()+cxPt13.x())/3.,
+                           (cxPt12.y()+cxPt23.y()+cxPt13.y())/3.,
+                           (cxPt12.z()+cxPt23.z()+cxPt13.z())/3.);
+
+    TrajectoryStateClosestToPoint caState1 = transTrack1.trajectoryStateClosestToPoint(cxPt);
+    TrajectoryStateClosestToPoint caState2 = transTrack2.trajectoryStateClosestToPoint(cxPt);
+    TrajectoryStateClosestToPoint caState3 = transTrack3.trajectoryStateClosestToPoint(cxPt);
+    if ( !caState1.isValid() or !caState2.isValid() or !caState3.isValid() ) return result;
+    if ( caState1.momentum().dot(caState2.momentum()) < 0 or
+         caState1.momentum().dot(caState3.momentum()) < 0 or
+         caState2.momentum().dot(caState3.momentum()) < 0 ) return result;
+
+    std::vector<reco::TransientTrack> transTracks = {transTrack1, transTrack2, transTrack3};
+
+    KalmanVertexFitter fitter(true);
+    TransientVertex tsv = fitter.vertex(transTracks);
+    if ( !tsv.isValid() or tsv.totalChiSquared() < 0. ) return result;
+
+    reco::Vertex sv = tsv;
+    if ( sv.normalizedChi2() > cut_maxVtxChi2_ ) return result;
+
+    typedef ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3> > SMatrixSym3D;
+    typedef ROOT::Math::SVector<double, 3> SVector3;
+
+    GlobalPoint vtxPos(sv.x(), sv.y(), sv.z());
+    SMatrixSym3D totalCov = pvCov + sv.covariance();
+    SVector3 distanceVectorXY(sv.x() - pvPos.x(), sv.y() - pvPos.y(), 0.);
+
+    const double rVtxMag = ROOT::Math::Mag(distanceVectorXY);
+    const double sigmaRvtxMag = sqrt(ROOT::Math::Similarity(totalCov, distanceVectorXY)) / rVtxMag;
+    if( rVtxMag < cut_minVtxLxy_ or rVtxMag > cut_maxVtxLxy_ or rVtxMag / sigmaRvtxMag < cut_minVtxSignif_ ) return result;
+
+    //SVector3 distanceVector3D(sv.x() - pvx, sv.y() - pvy, sv.z() - pvz);
+    //const double rVtxMag3D = ROOT::Math::Mag(distanceVector3D);
+
+    // Cuts finished, now we create the candidates and push them back into the collections.
+    int q1 = 0, q2 = 0, q3 = 0;
+    GlobalVector mom1, mom2, mom3;
+    if ( !tsv.hasRefittedTracks() ) {
+      q1 =  transTrack1.trajectoryStateClosestToPoint(vtxPos).charge();
+      q2 =  transTrack2.trajectoryStateClosestToPoint(vtxPos).charge();
+      q3 =  transTrack3.trajectoryStateClosestToPoint(vtxPos).charge();
+      mom1 = transTrack1.trajectoryStateClosestToPoint(vtxPos).momentum();
+      mom2 = transTrack2.trajectoryStateClosestToPoint(vtxPos).momentum();
+      mom3 = transTrack3.trajectoryStateClosestToPoint(vtxPos).momentum();
+    }
+    else {
+      auto refTracks = tsv.refittedTracks();
+      if ( refTracks.size() < 3 ) return result;
+
+      q1 =  refTracks.at(0).trajectoryStateClosestToPoint(vtxPos).charge();
+      q2 =  refTracks.at(1).trajectoryStateClosestToPoint(vtxPos).charge();
+      q3 =  refTracks.at(2).trajectoryStateClosestToPoint(vtxPos).charge();
+      mom1 = refTracks.at(0).trajectoryStateClosestToPoint(vtxPos).momentum();
+      mom2 = refTracks.at(1).trajectoryStateClosestToPoint(vtxPos).momentum();
+      mom3 = refTracks.at(2).trajectoryStateClosestToPoint(vtxPos).momentum();
+    }
+    if ( mom1.mag() <= 0 or mom2.mag() <= 0 or mom3.mag() ) return result;
+    const GlobalVector mom = mom1+mom2+mom3;
+
+    const double candE1 = hypot(mom1.mag(), mass1_);
+    const double candE2 = hypot(mom2.mag(), mass2_);
+    const double candE3 = hypot(mom3.mag(), mass3_);
+    const double vtxChi2 = sv.chi2();
+    const double vtxNdof = sv.ndof();
+
+    reco::Particle::Point vtx(sv.x(), sv.y(), sv.z());
+    const reco::Vertex::CovarianceMatrix vtxCov(sv.covariance());
+
+    const LV candLVec(mom.x(), mom.y(), mom.z(), candE1+candE2+candE3);
+    if ( cut_minVtxMass_ > candLVec.mass() or cut_maxVtxMass_ < candLVec.mass() ) return result;
+
+    result.p4 = candLVec;
+    result.vertex = vtx;
+    result.leg1.SetXYZT(mom1.x(), mom1.y(), mom1.z(), candE1);
+    result.leg2.SetXYZT(mom2.x(), mom2.y(), mom2.z(), candE2);
+    result.leg3.SetXYZT(mom3.x(), mom3.y(), mom3.z(), candE3);
+    result.q1 = q1;
+    result.q2 = q2;
+    result.q3 = q3;
+    result.chi2 = vtxChi2;
+    result.ndof = vtxNdof;
+    result.cov = vtxCov;
+    result.lxy = rVtxMag;
+    result.vz = std::abs(pvPos.z()-vtx.z());
+    result.isValid = true;
+  } catch ( std::exception& e ) { return SVFitResult(); }
+
+  return result;
+}
+
 int MuonMisIDNtupleMaker::muonIdBit(const reco::Muon& mu, const reco::Vertex& vtx) const
 {
   int result = 0;
@@ -533,35 +715,31 @@ int MuonMisIDNtupleMaker::genCategory(const reco::GenParticle& p) const
   return 0;
 }
 
-template<typename T>
-std::pair<int, int> MuonMisIDNtupleMaker::matchTwo(const LV& lv1, const LV& lv2, T& coll) const
+template<typename T1, typename T2>
+std::vector<int> MuonMisIDNtupleMaker::matchByDR(const T1& etas, const T1& phis, T2& coll) const
 {
-  std::map<double, int> idxs1, idxs2;
-  for ( int i=0, n=coll.size(); i<n; ++i ) {
-    const auto& p = coll.at(i);
-    const double dR1 = deltaR(lv1, p.p4());
-    const double dR2 = deltaR(lv2, p.p4());
+  assert(etas.size() == phis.size());
+  const int n = etas.size(), m = coll.size();
 
-    if ( dR1 < 0.3 ) idxs1[dR1] = i;
-    if ( dR2 < 0.3 ) idxs2[dR2] = i;
-  }
-  int idx1 = idxs1.empty() ? -1 : idxs1.begin()->second;
-  int idx2 = idxs2.empty() ? -1 : idxs2.begin()->second;
-  // Special care for duplication
-  if ( idx1 == idx2 and idx1 != -1 ) {
-    const double dR1 = idxs1.begin()->first;
-    const double dR2 = idxs2.begin()->first;
-    if ( dR1 >= dR2 ) {
-      if ( idxs1.size() > 1 ) idx1 = std::next(idxs1.begin())->second;
-      else idx1 = -1;
-    }
-    else {
-      if ( idxs2.size() > 1 ) idx2 = std::next(idxs2.begin())->second;
-      else idx2 = -1;
+  std::map<double, std::pair<int, int> > matches;
+  for ( int i=0; i<n; ++i ) {
+    const auto eta = etas[i], phi = phis[i];
+    for ( int j=0; j<m; ++j ) {
+      const auto& p = coll.at(j);
+      const double dR2 = deltaR2(p.eta(), p.phi(), eta, phi);
+      matches[dR2] = make_pair(i, j);
     }
   }
 
-  return make_pair(idx1, idx2);
+  // Cleanup to make unique mapping
+  std::vector<int> result(n, -1);
+  for ( const auto& match : matches ) {
+    //const double dR2 = match.first;
+    const int i = match.second.first, j = match.second.second;
+    if ( result[i] == -1 ) result[i] = j;
+  }
+
+  return result;
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"
