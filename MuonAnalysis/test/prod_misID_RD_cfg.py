@@ -29,6 +29,6 @@ process.TFileService = cms.Service("TFileService",
 )
 
 process.p = cms.Path(
-    process.ks + process.phi + process.lamb
+    process.misIDSeq
 )
 

@@ -159,6 +159,13 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
     cut_minVtxRawMass_ = 1.04; cut_maxVtxRawMass_ = 1.24;
     cut_minVtxMass_ = 1.06; cut_maxVtxMass_ = 1.22;
   }
+  else if ( vtxType == "d0" ) {
+    pdgId_ = 421;
+    pdgId1_ = 321; pdgId2_ = 211;
+    mass1_ = kaonMass; mass2_ = pionMass;
+    cut_minVtxRawMass_ = 1.6; cut_maxVtxRawMass_ = 2.1;
+    cut_minVtxMass_ = 1.7; cut_maxVtxMass_ = 2.0;
+  }
   else {
     pdgId_ = pset.getUntrackedParameter<int>("pdgId");
     mass1_ = pset.getUntrackedParameter<double>("mass1");
@@ -296,8 +303,13 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   else if ( pfCandHandle.isValid() ) {
     for ( auto cand = pfCandHandle->begin(); cand != pfCandHandle->end(); ++cand ) {
       if ( cand->pt() < 0.35 or std::abs(cand->eta()) > cut_maxTrkEta_ ) continue;
-
       auto track = cand->pseudoTrack();
+      // Apply basic track quality cuts
+      if ( !track.quality(reco::TrackBase::loose) or
+            track.normalizedChi2() >= cut_maxTrkChi2_ or track.numberOfValidHits() < cut_minTrkNHit_ ) continue;
+      const double ipSigXY = std::abs(track.dxy(pvPos)/track.dxyError());
+      const double ipSigZ = std::abs(track.dz(pvPos)/track.dzError());
+      if ( ipSigXY < cut_minTrkSigXY_ or ipSigZ < cut_minTrkSigZ_  ) continue;
       auto transTrack = trackBuilder->build(track);
       transTracks.push_back(transTrack);
     }

@@ -30,4 +30,7 @@ ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
 
 phi = ks.clone(vtxType = cms.untracked.string("phi"), minTrkSigXY = cms.untracked.double(-999),)
 lamb = ks.clone(vtxType = cms.untracked.string("lambda"))
+d0 = ks.clone(vtxType = cms.untracked.string("d0"))
+
+misIDSeq = cms.Sequence(ks + phi + lamb + d0)
 
