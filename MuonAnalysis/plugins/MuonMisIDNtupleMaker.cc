@@ -108,6 +108,7 @@ private:
   unsigned char b_nPV, b_nSV, b_nGen;
 
   float b_vtx_mass, b_vtx_pt, b_vtx_lxy, b_vtx_vz;
+  float b_vtx_mass12, b_vtx_mass23, b_vtx_mass13; // 3 track case for Dalitz
   vfloat* b_trk_pt, * b_trk_eta, * b_trk_phi;
   vint* b_trk_pdgId;
 
@@ -219,6 +220,12 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   tree_->Branch("vtx_pt"  , &b_vtx_pt  , "vtx_pt/F"  );
   tree_->Branch("vtx_lxy" , &b_vtx_lxy , "vtx_lxy/F" );
   tree_->Branch("vtx_vz"  , &b_vtx_vz  , "vtx_vz/F"  );
+  if ( pdgId3_ != 0 ) {
+    tree_->Branch("vtx_mass12", &b_vtx_mass12, "vtx_mass12/F");
+    tree_->Branch("vtx_mass23", &b_vtx_mass23, "vtx_mass23/F");
+    tree_->Branch("vtx_mass13", &b_vtx_mass13, "vtx_mass13/F");
+  }
+
   b_trk_pdgId = new vint();
   b_trk_pt = new vfloat();
   b_trk_eta = new vfloat();
@@ -415,6 +422,12 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     b_vtx_pt = sv.p4.pt();
     b_vtx_lxy = sv.lxy;
     b_vtx_vz = sv.vz;
+
+    if ( pdgId3_ != 0 ) {
+      b_vtx_mass12 = (sv.leg1+sv.leg2).mass();
+      b_vtx_mass23 = (sv.leg2+sv.leg3).mass();
+      b_vtx_mass13 = (sv.leg1+sv.leg3).mass();
+    }
 
     // Fill track variables
     *b_trk_pdgId = {sv.q1*pdgId1_, sv.q2*pdgId2_};
