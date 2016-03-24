@@ -67,7 +67,6 @@ private:
                     const reco::TransientTrack& transTrack2,
                     const reco::TransientTrack& transTrack3) const;
   int muonIdBit(const reco::Muon& mu, const reco::Vertex& vertex) const;
-  int genCategory(const reco::GenParticle& p) const;
   template <typename T1, typename T2>
   std::vector<int> matchByDR(const T1& etas, const T1& phis, T2& coll) const;
 
@@ -88,6 +87,7 @@ private:
   int pdgId_;
 
   double cut_minVtxRawMass_, cut_maxVtxRawMass_;
+  double cut_minVtxRawMass12_, cut_maxVtxRawMass12_;
   double cut_minVtxMass_, cut_maxVtxMass_, cut_minVtxLxy_, cut_maxVtxLxy_;
   const double cut_minTrkPt_, cut_maxTrkEta_;
   const int cut_minTrkNHit_;
@@ -178,13 +178,15 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
     pdgId1_ = 321; pdgId2_ = 211; pdgId3_ = 211;
     mass1_ = kaonMass; mass2_ = pionMass; mass3_ = pionMass;
     cut_minVtxRawMass_ = 1.6; cut_maxVtxRawMass_ = 2.1;
+    cut_minVtxRawMass12_ = 0; cut_maxVtxRawMass12_ = 999; // No cut on kpi since the grouping is not real
     cut_minVtxMass_ = 1.7; cut_maxVtxMass_ = 2.0;
   }
   else if ( vtxType == "B+" ) {
     pdgId_ = 521;
-    pdgId1_ = 321; pdgId2_ = 13; pdgId3_ = 13;
-    mass1_ = kaonMass; mass2_ = muonMass; mass3_ = muonMass;
+    pdgId1_ = pdgId2_ = 13; pdgId3_ = 321;
+    mass1_ = mass2_ = muonMass; mass3_ = kaonMass;
     cut_minVtxRawMass_ = 5.0; cut_maxVtxRawMass_ = 5.5;
+    cut_minVtxRawMass12_ = 3.09-0.2; cut_maxVtxRawMass12_ = 3.09+0.2; // Cut on jpsi
     cut_minVtxMass_ = 5.1; cut_maxVtxMass_ = 5.4;
   }
   else {
@@ -342,29 +344,37 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
 
   // Collect vertices after the fitting
   std::vector<SVFitResult> svs;
-  if ( pdgId3_ == 0 ) { // V->TT case
-    const bool isSameFlav = (pdgId1_ == pdgId2_);
-    for ( auto itr1 = transTracks.begin(); itr1 != transTracks.end(); ++itr1 ) {
-      const reco::Track& track1 = itr1->track();
-      if ( isSameFlav and track1.charge() < 0 ) continue;
-      const double e1 = sqrt(mass1_*mass1_ + track1.momentum().mag2());
+  const bool isSameFlav = (pdgId1_ == pdgId2_);
+  for ( auto itr1 = transTracks.begin(); itr1 != transTracks.end(); ++itr1 ) {
+    const reco::Track& track1 = itr1->track();
+    if ( isSameFlav and track1.charge() < 0 ) continue;
+    const double e1 = sqrt(mass1_*mass1_ + track1.momentum().mag2());
 
-      for ( auto itr2 = transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
-        if ( itr1 == itr2 ) continue;
-        const reco::Track& track2 = itr2->track();
-        if ( track1.charge() == track2.charge() ) continue;
-        if ( std::abs(deltaPhi(track1.phi(), track2.phi())) > 3.14 ) continue;
-        if ( isSameFlav and track2.charge() > 0 ) continue;
+    for ( auto itr2 = transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
+      if ( itr1 == itr2 ) continue;
+      const reco::Track& track2 = itr2->track();
+      if ( track1.charge() == track2.charge() ) continue;
+      if ( std::abs(deltaPhi(track1.phi(), track2.phi())) > 3.14 ) continue;
+      if ( isSameFlav ) {
+        if ( track2.charge() > 0 ) continue;
+      }
+      else {
+        // heavier particle takes larger portion of momentum
+        if ( mass1_ > mass2_ ) {
+          if ( track1.pt() < track2.pt() ) continue;
+        }
+        else {
+          if ( track2.pt() < track1.pt() ) continue;
+        }
+      }
+      const double e2 = sqrt(mass2_*mass2_ + track2.momentum().mag2());
+
+      const auto mom = track1.momentum() + track2.momentum();
+      const double e = e1+e2;
+      const double rawMass = sqrt(e*e - mom.mag2());
+
+      if ( pdgId3_ == 0 ) { // V->TT case
         if ( track1.pt() < cut_minTrkPt_ and track2.pt() < cut_minTrkPt_ ) continue; // at least one track should pass minimum pt cut
-        const double e2 = sqrt(mass2_*mass2_ + track2.momentum().mag2());
-
-        const double px = track1.px() + track2.px();
-        const double py = track1.py() + track2.py();
-        const double pz = track1.pz() + track2.pz();
-        const double p2 = px*px + py*py + pz*pz;
-        const double e = e1+e2;
-
-        const double rawMass = sqrt(e*e - p2);
         if ( rawMass < cut_minVtxRawMass_ or rawMass > cut_maxVtxRawMass_ ) continue;
 
         auto res = fitSV(pvPos, pvCov, *itr1, *itr2);
@@ -372,38 +382,26 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
 
         svs.push_back(res);
       }
-    }
-  }
-  else { // V->TTT three body decay case
-    // Works only for no-tertiory vertex cases. ex) D0->Kpipi or B+->JpsiK+
-    // Assume track2 and track3 are same type - K(pi,pi) for D0, K(mu,mu) for B+
-    assert(pdgId2_ == pdgId3_);
-    for ( auto itr1 = transTracks.begin(); itr1 != transTracks.end(); ++itr1 ) {
-      const reco::Track& track1 = itr1->track();
-      const double e1 = sqrt(mass1_*mass1_ + track1.momentum().mag2());
+      else { // V->TTT three body decay case
+        // Works only for no-tertiory vertex cases. ex) D+->Kpipi or B+->JpsiK+
+        // Assume track1 and track2 are opposite signed : D+ -> (K,pi),pi and B+ -> (mu,mu),K
 
-      for ( auto itr2 = transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
-        if ( itr1 == itr2 ) continue;
-        const reco::Track& track2 = itr2->track();
-        if ( track2.charge() < 0 ) continue;
-        const double e2 = sqrt(mass2_*mass2_ + track2.momentum().mag2());
+        // Do the kinematic preselection on the sub-vertex
+        if ( rawMass < cut_minVtxRawMass12_ or rawMass > cut_maxVtxRawMass12_ ) continue;
 
         for ( auto itr3 = transTracks.begin(); itr3 != transTracks.end(); ++itr3 ) {
           if ( itr1 == itr3 or itr2 == itr3 ) continue;
           const reco::Track& track3 = itr3->track();
-          if ( track3.charge() > 0 ) continue;
+          if ( std::abs(deltaPhi(track1.phi(), track3.phi())) > 3.14 ) continue;
+          if ( std::abs(deltaPhi(track2.phi(), track3.phi())) > 3.14 ) continue;
           if ( track1.pt() < cut_minTrkPt_ and track2.pt() < cut_minTrkPt_ and track3.pt() < cut_minTrkPt_ ) continue;
 
+          const auto momF = mom + track3.momentum();
           const double e3 = sqrt(mass3_*mass3_ + track3.momentum().mag2());
+          const double eF = e+e3;
 
-          const double px = track1.px() + track2.px() + track3.px();
-          const double py = track1.py() + track2.py() + track3.py();
-          const double pz = track1.pz() + track2.pz() + track3.pz();
-          const double p2 = px*px + py*py + pz*pz;
-          const double e = e1+e2+e3;
-
-          const double rawMass = sqrt(e*e - p2);
-          if ( rawMass < cut_minVtxRawMass_ or rawMass > cut_maxVtxRawMass_ ) continue;
+          const double rawMassF = sqrt(eF*eF - momF.mag2());
+          if ( rawMassF < cut_minVtxRawMass_ or rawMassF > cut_maxVtxRawMass_ ) continue;
 
           auto res = fitSV(pvPos, pvCov, *itr1, *itr2, *itr3);
           if ( !res.isValid ) continue;
@@ -596,7 +594,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
          !transTrack3.impactPointTSCP().isValid() ) return result;
     auto ipState1 = transTrack1.impactPointTSCP().theState();
     auto ipState2 = transTrack2.impactPointTSCP().theState();
-    auto ipState3 = transTrack2.impactPointTSCP().theState();
+    auto ipState3 = transTrack3.impactPointTSCP().theState();
     //if ( std::abs(ipState1.position().z()-pv.z()) > 1 or
     //     std::abs(ipState2.position().z()-pv.z()) > 1 ) return SVFitResult();
 
@@ -677,7 +675,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
       mom2 = refTracks.at(1).trajectoryStateClosestToPoint(vtxPos).momentum();
       mom3 = refTracks.at(2).trajectoryStateClosestToPoint(vtxPos).momentum();
     }
-    if ( mom1.mag() <= 0 or mom2.mag() <= 0 or mom3.mag() ) return result;
+    if ( mom1.mag() <= 0 or mom2.mag() <= 0 or mom3.mag() <= 0 ) return result;
     const GlobalVector mom = mom1+mom2+mom3;
 
     const double candE1 = hypot(mom1.mag(), mass1_);
@@ -721,11 +719,6 @@ int MuonMisIDNtupleMaker::muonIdBit(const reco::Muon& mu, const reco::Vertex& vt
   if ( muon::isSoftMuon(mu, vtx)   ) result |= 1<<3;
 
   return result;
-}
-
-int MuonMisIDNtupleMaker::genCategory(const reco::GenParticle& p) const
-{
-  return 0;
 }
 
 template<typename T1, typename T2>
