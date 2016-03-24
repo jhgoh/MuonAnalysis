@@ -93,23 +93,23 @@ private:
   int pdgId1_, pdgId2_;
 
   // Trees and histograms
+  typedef std::vector<int> vint;
+  typedef std::vector<float> vfloat;
+
   TTree* tree_;
-  int b_run, b_lumi, b_event;
+  unsigned char b_run, b_lumi;
+  unsigned long long int b_event;
   //double b_genWeight, b_puWeight;
-  int b_nPV, b_nSV;
+  unsigned char b_nPV, b_nSV, b_nGen;
 
-  double b_mass, b_pt, b_lxy, b_vz;
-  LV b_track1, b_track2;
+  float b_vtx_mass, b_vtx_pt, b_vtx_lxy, b_vtx_vz;
+  vfloat* b_trk_pt, * b_trk_eta, * b_trk_phi;
+  vint* b_trk_pdgId;
 
-  int b_muQ1, b_muQ2, b_pdgId1, b_pdgId2;
-  LV b_mu1, b_mu2;
-  int b_muId1, b_muId2;
-  double b_muDR1, b_muDR2;
+  vfloat* b_mu_pt, * b_mu_dR;
+  vint* b_mu_q, * b_mu_id;
 
-  int b_nGenSV;
-  //int b_genPdgId1, b_genPdgId2, b_genType1, b_genType2;
-  //LV b_gen1, b_gen2;
-  //double b_genDR1, b_genDR2;
+  float b_gen_dR;
 
   TH1D* hN_;
   TH1D* hM_;
@@ -183,42 +183,38 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   edm::Service<TFileService> fs;
   tree_ = fs->make<TTree>("tree", "tree");
 
-  tree_->Branch("run", &b_run, "run/I");
-  tree_->Branch("lumi", &b_lumi, "lumi/I");
-  tree_->Branch("event", &b_event, "event/I");
+  tree_->Branch("run", &b_run, "run/b"); // 8 bit unsigned integer
+  tree_->Branch("lumi", &b_lumi, "lumi/b"); // 8 bit unsigned integer
+  tree_->Branch("event", &b_event, "event/l"); // 64bit unsigned integer
 
-  //tree_->Branch("genWeight", &b_genWeight, "genWeight/D");
-  //tree_->Branch("puWeight", &b_puWeight, "puWeight/D");
-  tree_->Branch("nPV", &b_nPV, "nPV/I");
-  tree_->Branch("nSV", &b_nSV, "nSV/I");
+  //tree_->Branch("genWeight", &b_genWeight, "genWeight/F");
+  //tree_->Branch("puWeight", &b_puWeight, "puWeight/F");
+  tree_->Branch("nPV", &b_nPV, "nPV/b");
+  tree_->Branch("nSV", &b_nSV, "nSV/b");
+  tree_->Branch("nGen", &b_nGen, "nGen/b");
 
-  tree_->Branch("mass", &b_mass, "mass/D");
-  tree_->Branch("pt"  , &b_pt  , "pt/D"  );
-  tree_->Branch("lxy" , &b_lxy , "lxy/D" );
-  tree_->Branch("vz"  , &b_vz  , "vz/D"  );
-  tree_->Branch("pdgId1", &b_pdgId1, "pdgId1/I");
-  tree_->Branch("pdgId2", &b_pdgId2, "pdgId2/I");
-  tree_->Branch("track1", "math::XYZTLorentzVector", &b_track1);
-  tree_->Branch("track2", "math::XYZTLorentzVector", &b_track2);
+  tree_->Branch("vtx_mass", &b_vtx_mass, "vtx_mass/F");
+  tree_->Branch("vtx_pt"  , &b_vtx_pt  , "vtx_pt/F"  );
+  tree_->Branch("vtx_lxy" , &b_vtx_lxy , "vtx_lxy/F" );
+  tree_->Branch("vtx_vz"  , &b_vtx_vz  , "vtx_vz/F"  );
+  b_trk_pdgId = new vint();
+  b_trk_pt = new vfloat();
+  b_trk_eta = new vfloat();
+  b_trk_phi = new vfloat();
+  tree_->Branch("trk_pdgId", "std::vector<int>", &b_trk_pdgId);
+  tree_->Branch("trk_pt", "std::vector<float>", &b_trk_pt);
+  tree_->Branch("trk_eta", "std::vector<float>", &b_trk_eta);
+  tree_->Branch("trk_phi", "std::vector<float>", &b_trk_phi);
+  b_mu_q = new vint();
+  b_mu_id = new vint();
+  b_mu_dR = new vfloat();
+  b_mu_pt = new vfloat();
+  tree_->Branch("mu_q", "std::vector<int>", &b_mu_q);
+  tree_->Branch("mu_id", "std::vector<int>", &b_mu_id);
+  tree_->Branch("mu_dR", "std::vector<float>", &b_mu_dR);
+  tree_->Branch("mu_pt", "std::vector<float>", &b_mu_pt);
 
-  tree_->Branch("muQ1", &b_muQ1, "muQ1/I");
-  tree_->Branch("muQ2", &b_muQ2, "muQ2/I");
-  tree_->Branch("muId1", &b_muId1, "muId1/I");
-  tree_->Branch("muId2", &b_muId2, "muId2/I");
-  tree_->Branch("muDR1", &b_muDR1, "muDR1/D");
-  tree_->Branch("muDR2", &b_muDR2, "muDR2/D");
-  tree_->Branch("mu1", "math::XYZTLorentzVector", &b_mu1);
-  tree_->Branch("mu2", "math::XYZTLorentzVector", &b_mu2);
-
-  tree_->Branch("nGenSV", &b_nGenSV, "nGenSV/I");
-  //tree_->Branch("genPdgId1", &b_genPdgId1, "genPdgId1/I");
-  //tree_->Branch("genPdgId2", &b_genPdgId2, "genPdgId2/I");
-  //tree_->Branch("genType1", &b_genType1, "genType1/I");
-  //tree_->Branch("genType2", &b_genType2, "genType2/I");
-  //tree_->Branch("genDR1", &b_genDR1, "genDR1/D");
-  //tree_->Branch("genDR2", &b_genDR2, "genDR2/D");
-  //tree_->Branch("gen1", "math::XYZTLorentzVector", &b_gen1);
-  //tree_->Branch("gen2", "math::XYZTLorentzVector", &b_gen2);
+  tree_->Branch("gen_dR", &b_gen_dR, "gen_dR/F");
 
   hN_ = fs->make<TH1D>("hN", "hN", 100, 0, 100);
   hM_ = fs->make<TH1D>("hM", "hM", 100, cut_minVtxMass_, cut_maxVtxMass_);
@@ -259,12 +255,12 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   edm::Handle<reco::MuonCollection> muonHandle;
   event.getByToken(muonToken_, muonHandle);
 
-  b_nGenSV = 0;
+  b_nGen = 0;
   //std::vector<reco::GenParticle> genMuHads;
   edm::Handle<reco::GenParticleCollection> genParticleHandle;
+  std::vector<const reco::GenParticle*> resonances;
   if ( !event.isRealData() ) {
     //bool hasResonance = false;
-    std::vector<const reco::GenParticle*> resonances;
     event.getByToken(genParticleToken_, genParticleHandle);
     for ( auto& p : *genParticleHandle ) {
       if ( !p.isLastCopy() ) continue;
@@ -282,7 +278,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       //if ( p.charge() != 0 and (aid != 13 or aid > 100) ) genMuHads.push_back(p);
     }
     if ( applyGenFilter_ and resonances.empty() ) return;
-    b_nGenSV = resonances.size();
+    b_nGen = resonances.size();
   }
 
   // Collect transient tracks
@@ -352,38 +348,48 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
 
   // Loop over the SV fit results to fill tree
   for ( const auto& sv : svs ) {
-    b_mass = sv.p4.mass();
-    b_pt = sv.p4.pt();
-    b_lxy = sv.lxy;
-    b_vz = sv.vz;
-    b_pdgId1 = sv.q1*pdgId1_;
-    b_pdgId2 = sv.q2*pdgId2_;
-    b_track1 = sv.leg1;
-    b_track2 = sv.leg2;
+    b_vtx_mass = sv.p4.mass();
+    b_vtx_pt = sv.p4.pt();
+    b_vtx_lxy = sv.lxy;
+    b_vtx_vz = sv.vz;
+
+    // Fill track variables
+    *b_trk_pdgId = {sv.q1*pdgId1_, sv.q2*pdgId2_};
+    *b_trk_pt = {float(sv.leg1.pt()), float(sv.leg2.pt())};
+    *b_trk_eta = {float(sv.leg1.eta()), float(sv.leg2.eta())};
+    *b_trk_phi = {float(sv.leg1.phi()), float(sv.leg2.phi())};
 
     // Match muons to the SV legs
-    b_muQ1 = b_muQ2 = b_muId1 = b_muId2 = 0;
-    b_muDR1 = b_muDR2 = -1;
-    b_mu1 = b_mu2 = LV();
+    *b_mu_q = {0, 0};
+    *b_mu_id = {0, 0};
+    *b_mu_dR = {-1, -1};
+    *b_mu_pt = {0, 0};
     auto muonIdxPair = matchTwo(sv.leg1, sv.leg2, *muonHandle);
     const int muonIdx1 = muonIdxPair.first, muonIdx2 = muonIdxPair.second;
     if ( muonIdx1 >= 0 ) {
       const auto& mu = muonHandle->at(muonIdx1);
-      b_muQ1 = mu.charge();
-      b_mu1 = mu.p4();
-      b_muId1 = muonIdBit(mu, pv);
-      b_muDR1 = deltaR(mu.p4(), sv.leg1);
+      b_mu_q->at(0) = mu.charge();
+      b_mu_pt->at(0) = mu.pt();
+      b_mu_id->at(0) = muonIdBit(mu, pv);
+      b_mu_dR->at(0) = deltaR(mu.p4(), sv.leg1);
     }
     if ( muonIdx2 >= 0 ) {
       const auto& mu = muonHandle->at(muonIdx2);
-      b_muQ2 = mu.charge();
-      b_mu2 = mu.p4();
-      b_muId2 = muonIdBit(mu, pv);
-      b_muDR2 = deltaR(mu.p4(), sv.leg2);
+      b_mu_q->at(1) = mu.charge();
+      b_mu_pt->at(1) = mu.pt();
+      b_mu_id->at(1) = muonIdBit(mu, pv);
+      b_mu_dR->at(1) = deltaR(mu.p4(), sv.leg1);
     }
 
-/*
     // Match gen muons or hadrons to the SV legs
+    double minDR = 0.3;
+    const reco::GenParticle* matchedGen = 0;
+    for ( auto& x : resonances ) {
+      const double dR = deltaR(x->p4(), sv.p4);
+      if ( dR < minDR ) { matchedGen = x; minDR = dR; }
+    }
+    b_gen_dR = matchedGen ? minDR : -1;
+/*
     //b_gen1 = b_gen2 = LV();
     //b_genPdgId1 = b_genPdgId2 = b_genType1 = b_genType2 = 0;
     //b_genDR1 = b_genDR2 = -1;
@@ -405,7 +411,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     }
 */
 
-    hM_->Fill(b_mass);
+    hM_->Fill(b_vtx_mass);
     tree_->Fill();
   }
 }
