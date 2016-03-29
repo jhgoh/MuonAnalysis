@@ -88,6 +88,7 @@ private:
 
   double cut_minVtxRawMass_, cut_maxVtxRawMass_;
   double cut_minVtxRawMass12_, cut_maxVtxRawMass12_;
+  double cut_minVtxMass12_, cut_maxVtxMass12_;
   double cut_minVtxMass_, cut_maxVtxMass_, cut_minVtxLxy_, cut_maxVtxLxy_;
   const double cut_minTrkPt_, cut_maxTrkEta_;
   const int cut_minTrkNHit_;
@@ -149,8 +150,8 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
     pdgId_ = 310;
     pdgId1_ = pdgId2_ = 211;
     mass1_ = pionMass; mass2_ = pionMass;
-    cut_minVtxRawMass_ = 0.35; cut_maxVtxRawMass_ = 0.65;
-    cut_minVtxMass_ = 0.40; cut_maxVtxMass_ = 0.60;
+    cut_minVtxRawMass_ = 0.43; cut_maxVtxRawMass_ = 0.58;
+    cut_minVtxMass_ = 0.45; cut_maxVtxMass_ = 0.56;
   }
   else if ( vtxType == "phi" ) {
     pdgId_ = 333;
@@ -166,6 +167,13 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
     cut_minVtxRawMass_ = 1.04; cut_maxVtxRawMass_ = 1.24;
     cut_minVtxMass_ = 1.06; cut_maxVtxMass_ = 1.22;
   }
+  else if ( vtxType == "jpsi" ) {
+    pdgId_ = 443;
+    pdgId1_ = pdgId2_ = 13;
+    mass1_ = mass2_ = muonMass;
+    cut_minVtxRawMass_ = 3.09-0.2; cut_maxVtxRawMass_ = 3.09+0.2;
+    cut_minVtxMass_ = 3.09-0.1; cut_maxVtxMass_ = 3.09+0.1;
+  }
   else if ( vtxType == "D0" ) {
     pdgId_ = 421;
     pdgId1_ = 321; pdgId2_ = 211;
@@ -179,6 +187,7 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
     mass1_ = kaonMass; mass2_ = pionMass; mass3_ = pionMass;
     cut_minVtxRawMass_ = 1.6; cut_maxVtxRawMass_ = 2.1;
     cut_minVtxRawMass12_ = 0; cut_maxVtxRawMass12_ = 999; // No cut on kpi since the grouping is not real
+    cut_minVtxMass12_ = 0; cut_maxVtxMass12_ = 999; // No cut on kpi since the grouping is not real
     cut_minVtxMass_ = 1.7; cut_maxVtxMass_ = 2.0;
   }
   else if ( vtxType == "B+" ) {
@@ -187,6 +196,7 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
     mass1_ = mass2_ = muonMass; mass3_ = kaonMass;
     cut_minVtxRawMass_ = 5.0; cut_maxVtxRawMass_ = 5.5;
     cut_minVtxRawMass12_ = 3.09-0.2; cut_maxVtxRawMass12_ = 3.09+0.2; // Cut on jpsi
+    cut_minVtxMass12_ = 3.09-0.1; cut_maxVtxMass12_ = 3.09+0.1; // Cut on jpsi
     cut_minVtxMass_ = 5.1; cut_maxVtxMass_ = 5.4;
   }
   else {
@@ -676,7 +686,8 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
       mom3 = refTracks.at(2).trajectoryStateClosestToPoint(vtxPos).momentum();
     }
     if ( mom1.mag() <= 0 or mom2.mag() <= 0 or mom3.mag() <= 0 ) return result;
-    const GlobalVector mom = mom1+mom2+mom3;
+    const GlobalVector mom12 = mom1+mom2;
+    const GlobalVector mom = mom12+mom3;
 
     const double candE1 = hypot(mom1.mag(), mass1_);
     const double candE2 = hypot(mom2.mag(), mass2_);
@@ -687,6 +698,8 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
     reco::Particle::Point vtx(sv.x(), sv.y(), sv.z());
     const reco::Vertex::CovarianceMatrix vtxCov(sv.covariance());
 
+    const LV cand12LVec(mom12.x(), mom12.y(), mom12.z(), candE1+candE2);
+    if ( cut_minVtxMass12_ > cand12LVec.mass() or cut_maxVtxMass12_ < cand12LVec.mass() ) return result;
     const LV candLVec(mom.x(), mom.y(), mom.z(), candE1+candE2+candE3);
     if ( cut_minVtxMass_ > candLVec.mass() or cut_maxVtxMass_ < candLVec.mass() ) return result;
 

@@ -33,6 +33,7 @@ lamb = ks.clone(vtxType = cms.untracked.string("lambda"))
 D0 = ks.clone(vtxType = cms.untracked.string("D0"))
 Dp = ks.clone(vtxType = cms.untracked.string("D+"))
 Bp = ks.clone(vtxType = cms.untracked.string("B+"))
+jpsi = ks.clone(vtxType = cms.untracked.string("jpsi"))
 
 misIDSeq = cms.Sequence(ks + phi + lamb + Dp + Bp)
 
