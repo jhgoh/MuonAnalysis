@@ -33,7 +33,7 @@ fitTemplate = cms.EDAnalyzer("TagProbeFitTreeAnalyzer",
         voigtPlusPol = cms.vstring(
             "Voigtian::signal(mass, mean[90,80,100], width[2.495], sigma[3,1,20])",
             "RooChebychev::backgroundPass(mass, {pp0[0, -5, 5], pp1[0, -5, 5], pp2[0, -5, 5]})",
-            "RooChebychev::backgroundPass(mass, {pf0[0, -5, 5], pf1[0, -5, 5], pf2[0, -5, 5]})",
+            "RooChebychev::backgroundFail(mass, {pf0[0, -5, 5], pf1[0, -5, 5], pf2[0, -5, 5]})",
             "efficiency[0.9,0,1]",
             "signalFractionInPassing[0.9]"
         ),
