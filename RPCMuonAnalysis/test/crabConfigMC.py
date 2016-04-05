@@ -8,7 +8,7 @@ config.General.workArea = "RPCMuonEff/DYJets_MG"
 
 config.section_("JobType")
 config.JobType.pluginName  = 'Analysis'
-config.JobType.psetName    = 'prod_tp_MC_cfg.py'
+config.JobType.psetName    = 'tp_prod_MC_cfg.py'
 
 config.section_("Data")
 config.Data.publication  = False

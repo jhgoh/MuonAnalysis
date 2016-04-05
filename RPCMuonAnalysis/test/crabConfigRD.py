@@ -8,7 +8,7 @@ config.General.workArea = "RPCMuonEff/SingleMuon_2015D"
 
 config.section_("JobType")
 config.JobType.pluginName  = 'Analysis'
-config.JobType.psetName    = 'prod_tp_RD_cfg.py'
+config.JobType.psetName    = 'tp_prod_RD_cfg.py'
 
 config.section_("Data")
 config.Data.publication  = False
