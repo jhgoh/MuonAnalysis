@@ -17,7 +17,7 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 50000
 process.source = cms.Source("PoolSource", fileNames = cms.untracked.vstring())
 
 process.source.fileNames = [
-    '/store/mc/RunIIFall15DR76Premix/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/AODSIM/premixPU50_deterministic_76X_mcRun2_asymptotic_v12_ext1-v2/00000/002236D0-08F6-E511-A030-0CC47A4D7646.root'
+    '/store/mc/RunIIFall15DR76/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/AODSIM/PU25nsPoisson50_76X_mcRun2_asymptotic_v12_ext1-v1/20000/0069F61C-CBF3-E511-929C-02163E01769E.root'
 ]
 
 process.rpcRecHitAnalysis = cms.EDAnalyzer("RPCRecHitAnalysis",
