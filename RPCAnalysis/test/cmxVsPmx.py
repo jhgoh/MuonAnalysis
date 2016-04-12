@@ -5,6 +5,10 @@ from math import *
 #gROOT.SetBatch(kTRUE)
 gStyle.SetOptStat(0)
 
+#wget 'https://github.com/hep-skku/SKKU/blob/49e3f08cd002f7df016e8e25256002d35250e323/RPCAnalysis/test/CMX.root?raw=true -O CMX.root'
+#wget 'https://github.com/hep-skku/SKKU/blob/49e3f08cd002f7df016e8e25256002d35250e323/RPCAnalysis/test/PMX_DET.root?raw=true -O PMX_DET.root'
+#wget 'https://github.com/hep-skku/SKKU/blob/49e3f08cd002f7df016e8e25256002d35250e323/RPCAnalysis/test/PMX_NONDET.root?raw=true -O PMX_NONDET.root'
+
 refInput = ["classic", kBlack, 1, TFile("CMX.root")]
 cmpInputs = [
   ["premix-det", kBlue, 1, TFile("PMX_DET.root")],
