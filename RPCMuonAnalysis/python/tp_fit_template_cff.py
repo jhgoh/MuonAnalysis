@@ -51,20 +51,22 @@ fitTemplate = cms.EDAnalyzer("TagProbeFitTreeAnalyzer",
         RPC_voigtExpo = cms.PSet(
             BinToPDFmap = cms.vstring('voigtPlusExpo'),
             BinnedVariables = cms.PSet(
-                pt     = cms.vdouble(  10, 20, 30, 40, 60, 100 ),
-                abseta = cms.vdouble(  0.0, 0.4, 0.9, 1.2, 1.6, 1.8, 1.9, 2.1, 2.4),
+                #pt     = cms.vdouble(  10, 20, 30, 40, 60, 100 ),
+                pt     = cms.vdouble( 20, 250 ),
+                #abseta = cms.vdouble(  0.0, 0.4, 0.9, 1.2, 1.6, 1.8, 1.9, 2.1, 2.4),
+                abseta = cms.vdouble([x*0.1 for x in range(0, 17)])
             ),
             EfficiencyCategoryAndState = cms.vstring('RPC', 'pass'),
             UnbinnedVariables = cms.vstring("mass"),
         ),
-        RPC_voigtPol = cms.PSet(
-            BinToPDFmap = cms.vstring('voigtPlusPol'),
-            BinnedVariables = cms.PSet(
-                pt     = cms.vdouble(  10, 20, 30, 40, 60, 100 ),
-                abseta = cms.vdouble(  0.0, 0.4, 0.9, 1.2, 1.6, 1.8, 1.9, 2.1, 2.4),
-            ),
-            EfficiencyCategoryAndState = cms.vstring('RPC', 'pass'),
-            UnbinnedVariables = cms.vstring("mass"),
-        ),
+#        RPC_voigtPol = cms.PSet(
+#            BinToPDFmap = cms.vstring('voigtPlusPol'),
+#            BinnedVariables = cms.PSet(
+#                pt     = cms.vdouble(  10, 20, 30, 40, 60, 100 ),
+#                abseta = cms.vdouble(  0.0, 0.4, 0.9, 1.2, 1.6, 1.8, 1.9, 2.1, 2.4),
+#            ),
+#            EfficiencyCategoryAndState = cms.vstring('RPC', 'pass'),
+#            UnbinnedVariables = cms.vstring("mass"),
+#        ),
     ),
 )
