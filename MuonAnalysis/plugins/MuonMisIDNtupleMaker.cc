@@ -66,7 +66,7 @@ private:
                     const reco::TransientTrack& transTrack1,
                     const reco::TransientTrack& transTrack2,
                     const reco::TransientTrack& transTrack3) const;
-  int muonIdBit(const reco::Muon& mu, const reco::Vertex& vertex) const;
+  void fillMuonId(const reco::Muon& mu, const reco::Vertex& vertex, std::vector<bool>* results[], int idx) const;
   template <typename T1, typename T2>
   std::vector<int> matchByDR(const T1& etas, const T1& phis, T2& coll) const;
 
@@ -101,6 +101,7 @@ private:
   // Trees and histograms
   typedef std::vector<int> vint;
   typedef std::vector<float> vfloat;
+  typedef std::vector<bool> vbool;
 
   TTree* tree_;
   unsigned char b_run, b_lumi;
@@ -114,7 +115,9 @@ private:
   vint* b_trk_pdgId;
 
   vfloat* b_mu_pt, * b_mu_dR;
-  vint* b_mu_q, * b_mu_id;
+  vint* b_mu_q;
+  static const int nId_ = 26;
+  vbool* b_mu_id[nId_];
 
   float b_gen_dR;
 
@@ -247,13 +250,46 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   tree_->Branch("trk_eta", "std::vector<float>", &b_trk_eta);
   tree_->Branch("trk_phi", "std::vector<float>", &b_trk_phi);
   b_mu_q = new vint();
-  b_mu_id = new vint();
   b_mu_dR = new vfloat();
   b_mu_pt = new vfloat();
   tree_->Branch("mu_q", "std::vector<int>", &b_mu_q);
-  tree_->Branch("mu_id", "std::vector<int>", &b_mu_id);
   tree_->Branch("mu_dR", "std::vector<float>", &b_mu_dR);
   tree_->Branch("mu_pt", "std::vector<float>", &b_mu_pt);
+
+  for ( int i=0; i<nId_; ++i ) b_mu_id[i] = new std::vector<bool>();
+
+  int nId = 0;
+  tree_->Branch("mu_isTight" , "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isMedium", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isLoose" , "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isSoft"  , "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isHighPt", "std::vector<bool>", &b_mu_id[nId++]);
+
+  tree_->Branch("mu_isGLB", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isTRK", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isSTA", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isRPC", "std::vector<bool>", &b_mu_id[nId++]);
+
+  tree_->Branch("mu_isGLBPT", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isTMLastLoose", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isTMLastTight", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isTM2DLoose", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isTM2DTight", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isOneLoose", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isOneTight", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isLastLowPtLoose", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isLastLowPtTight", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isGMTkChi2Compat", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isGMStaChi2Compat", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isGMTkKinkTight", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isTMLastAngLoose", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isTMLastAngTight", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isTMOneAngLoose", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isTMOneAngTight", "std::vector<bool>", &b_mu_id[nId++]);
+
+  tree_->Branch("mu_isRPCMedium", "std::vector<bool>", &b_mu_id[nId++]);
+
+  assert(nId == nId_);
 
   tree_->Branch("gen_dR", &b_gen_dR, "gen_dR/F");
 
@@ -451,30 +487,38 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
 
     // Match muons to the SV legs
     auto muMatch = matchByDR(*b_trk_eta, *b_trk_phi, *muonHandle);
-    *b_mu_q = pdgId3_ == 0 ? vint({0, 0}) : vint({0, 0, 0});
-    *b_mu_id = pdgId3_ == 0 ? vint({0, 0}) : vint({0, 0, 0});
-    *b_mu_dR = pdgId3_ == 0 ? vfloat({-1, -1}) : vfloat({-1, -1, -1});
-    *b_mu_pt = pdgId3_ == 0 ? vfloat({0, 0}) : vfloat({0, 0, 0});
+    if ( pdgId3_ == 0 ) {
+      *b_mu_q = vint({0, 0});
+      *b_mu_dR = vfloat({-1, -1});
+      *b_mu_pt = vfloat({0, 0});
+      for ( int i=0; i<nId_; ++i ) *b_mu_id[i] = vbool({false, false});
+    }
+    else {
+      *b_mu_q = vint({0, 0, 0});
+      *b_mu_dR = vfloat({-1, -1, -1});
+      *b_mu_pt = vfloat({0, 0, 0});
+      for ( int i=0; i<nId_; ++i ) *b_mu_id[i] = vbool({false, false, false});
+    }
     if ( muMatch[0] >= 0 ) {
       const auto& mu = muonHandle->at(muMatch[0]);
       b_mu_q->at(0) = mu.charge();
       b_mu_pt->at(0) = mu.pt();
-      b_mu_id->at(0) = muonIdBit(mu, pv);
       b_mu_dR->at(0) = deltaR(mu.p4(), sv.leg1);
+      fillMuonId(mu, pv, b_mu_id, 0);
     }
     if ( muMatch[1] >= 0 ) {
       const auto& mu = muonHandle->at(muMatch[1]);
       b_mu_q->at(1) = mu.charge();
       b_mu_pt->at(1) = mu.pt();
-      b_mu_id->at(1) = muonIdBit(mu, pv);
       b_mu_dR->at(1) = deltaR(mu.p4(), sv.leg1);
+      fillMuonId(mu, pv, b_mu_id, 1);
     }
     if ( pdgId3_ != 0 and muMatch[2] >= 0 ) {
       const auto& mu = muonHandle->at(muMatch[2]);
       b_mu_q->at(2) = mu.charge();
       b_mu_pt->at(2) = mu.pt();
-      b_mu_id->at(2) = muonIdBit(mu, pv);
       b_mu_dR->at(2) = deltaR(mu.p4(), sv.leg1);
+      fillMuonId(mu, pv, b_mu_id, 2);
     }
 
     // Match gen muons or hadrons to the SV legs
@@ -722,16 +766,41 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
   return result;
 }
 
-int MuonMisIDNtupleMaker::muonIdBit(const reco::Muon& mu, const reco::Vertex& vtx) const
+void MuonMisIDNtupleMaker::fillMuonId(const reco::Muon& mu, const reco::Vertex& vtx,
+                                      std::vector<bool>* result[], int idx) const
 {
-  int result = 0;
+  int nId = 0;
+  result[nId++]->at(idx) = muon::isTightMuon(mu, vtx);
+  result[nId++]->at(idx) = muon::isMediumMuon(mu);
+  result[nId++]->at(idx) = muon::isLooseMuon(mu);
+  result[nId++]->at(idx) = muon::isSoftMuon(mu, vtx);
+  result[nId++]->at(idx) = muon::isHighPtMuon(mu, vtx);
 
-  if ( muon::isLooseMuon(mu)       ) result |= 1<<0;
-  if ( muon::isMediumMuon(mu)      ) result |= 1<<1;
-  if ( muon::isTightMuon(mu, vtx)  ) result |= 1<<2;
-  if ( muon::isSoftMuon(mu, vtx)   ) result |= 1<<3;
+  result[nId++]->at(idx) = mu.isGlobalMuon();
+  result[nId++]->at(idx) = mu.isTrackerMuon();
+  result[nId++]->at(idx) = mu.isStandAloneMuon();
+  result[nId++]->at(idx) = mu.isRPCMuon();
 
-  return result;
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::GlobalMuonPromptTight);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::TMLastStationLoose);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::TMLastStationTight);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::TM2DCompatibilityLoose);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::TM2DCompatibilityTight);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::TMOneStationLoose);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::TMOneStationTight);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::TMLastStationOptimizedLowPtLoose);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::TMLastStationOptimizedLowPtTight);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::GMTkChiCompatibility);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::GMStaChiCompatibility);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::GMTkKinkTight);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::TMLastStationAngLoose);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::TMLastStationAngTight);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::TMOneStationAngLoose);
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::TMOneStationAngTight);
+
+  result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::RPCMuLoose, reco::Muon::RPCHitAndTrackArbitration);
+
+  assert(nId == nId_);
 }
 
 template<typename T1, typename T2>
