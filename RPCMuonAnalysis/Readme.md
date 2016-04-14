@@ -14,7 +14,7 @@ scram b -j8
 ntuple production 테스팅 하기
 
 ```
-cd CMSSW_7_6_3_patch2/src/SKKU/RPCMuonAnalysis/test
+cd CMSSW_7_6_3_patch2/src/SKKU/RPCMuonAnalysis/test/TagAndProbe
 cmsRun tp_prod_MC_cfg.py
 root -l tnp.root
 ```
