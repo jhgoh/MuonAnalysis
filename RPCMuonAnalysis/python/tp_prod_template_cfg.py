@@ -60,7 +60,7 @@ process.tagMuons = cms.EDFilter("PATMuonSelector",
     src = cms.InputTag("patMuonsWithTrigger"),
     cut = cms.string("pt > 21 && "+MuonIDFlags.Tight2012.value()+
                      " && !triggerObjectMatchesByCollection('hltL3MuonCandidates').empty()"+
-                     " && !triggerObjectMathcesByPath('HLT_IsoMu20_v*').empty()"+
+                     " && !triggerObjectMatchesByPath('HLT_IsoMu20_v*').empty()"+
                      " && pfIsolationR04().sumChargedHadronPt/pt < 0.2"),
 )
 process.oneTag  = cms.EDFilter("CandViewCountFilter", src = cms.InputTag("tagMuons"), minNumber = cms.uint32(1))
