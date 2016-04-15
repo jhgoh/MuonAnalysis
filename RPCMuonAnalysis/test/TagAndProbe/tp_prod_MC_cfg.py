@@ -33,6 +33,7 @@ process.p = cms.Path(
   + process.probeMuons * process.tpPairs * process.onePair
   * process.nverticesModule + process.njets30Module
   + process.genWeightInfo
+  + process.rpcMuonIds
   * process.tpTree
 )
 

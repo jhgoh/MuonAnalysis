@@ -1,0 +1,9 @@
+<use name="CommonTools/UtilAlgos"/>
+<use name="DataFormats/Common"/>
+<use name="DataFormats/MuonReco"/>
+<use name="DataFormats/RPCRecHit" />
+
+<library   name="RPCMuonAnalysis_plugins" file="*.cc">
+  <flags   EDM_PLUGIN="1"/>
+</library>
+

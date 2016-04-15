@@ -76,6 +76,9 @@ process.tpPairs = cms.EDProducer("CandViewShallowCloneCombiner",
 )
 process.onePair = cms.EDFilter("CandViewCountFilter", src = cms.InputTag("tpPairs"), minNumber = cms.uint32(1))
 
+process.load("SKKU.RPCMuonAnalysis.rpcMuonIds_cfi")
+process.rpcMuonIds.src = "probeMuons"
+
 process.tpTree = cms.EDAnalyzer("TagProbeFitTreeProducer",
     tagProbePairs = cms.InputTag("tpPairs"),
     arbitration   = cms.string("None"),
@@ -85,6 +88,13 @@ process.tpTree = cms.EDAnalyzer("TagProbeFitTreeProducer",
         phi = cms.string('phi'),
         pt = cms.string('pt'),
         eta = cms.string('eta'),
+
+        RPCLoose = cms.InputTag('rpcMuonIds:Loose'),
+        RPCTight = cms.InputTag('rpcMuonIds:Tight'),
+        RPCLSTLoose = cms.InputTag('rpcMuonIds:LastStationLoose'),
+        RPCLSTTight = cms.InputTag('rpcMuonIds:LastStationTight'),
+        RPCSSTLoose = cms.InputTag('rpcMuonIds:SecondStationLoose'),
+        RPCSSTTight = cms.InputTag('rpcMuonIds:SecondStationTight'),
     ),
     flags = cms.PSet(
         Glb = cms.string('isGlobalMuon'),
@@ -101,9 +111,6 @@ process.tpTree = cms.EDAnalyzer("TagProbeFitTreeProducer",
         TMOSTQual = cms.string('muonID("TMOneStationTight") && track.numberOfValidHits > 10 && track.normalizedChi2()<1.8 && track.hitPattern.pixelLayersWithMeasurement>1'),
         Tight2012 = cms.string('isPFMuon && numberOfMatchedStations > 1 && muonID("GlobalMuonPromptTight") && abs(dB) < 0.2 && track.hitPattern.trackerLayersWithMeasurement > 5 && track.hitPattern.numberOfValidPixelHits > 0'),
         RPC = cms.string('isRPCMuon()'),
-        #RPCLoose = cms.string('muonID("RPCMuLoose")'),
-        #RPCMedium = cms.string('muonID("RPCMuMedium")'),
-        #RPCTight = cms.string('muonID("RPCMuTight")'),
     ),
     tagVariables = cms.PSet(
         nVertices   = cms.InputTag("nverticesModule"),

@@ -18,6 +18,7 @@ process.p = cms.Path(
   + process.probeMuons * process.tpPairs * process.onePair
   * process.nverticesModule + process.njets30Module
   + process.addEventInfo
+  + process.rpcMuonIds
   * process.tpTree
 )
 
