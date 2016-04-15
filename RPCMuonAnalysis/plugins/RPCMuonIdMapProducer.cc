@@ -38,6 +38,8 @@ RPCMuonIdMapProducer::RPCMuonIdMapProducer(const edm::ParameterSet& pset):
 {
   produces<edm::ValueMap<float> >("Loose");
   produces<edm::ValueMap<float> >("Tight");
+  produces<edm::ValueMap<float> >("TwoStationLoose");
+  produces<edm::ValueMap<float> >("TwoStationTight");
   produces<edm::ValueMap<float> >("LastStationLoose");
   produces<edm::ValueMap<float> >("LastStationTight");
   produces<edm::ValueMap<float> >("SecondStationLoose");
@@ -52,6 +54,8 @@ void RPCMuonIdMapProducer::produce(edm::Event& event, const edm::EventSetup& eve
   std::map<std::string, vfloat> idMaps = {
     {"Loose", vfloat()},
     {"Tight", vfloat()},
+    {"TwoStationLoose", vfloat()},
+    {"TwoStationTight", vfloat()},
     {"LastStationLoose", vfloat()},
     {"LastStationTight", vfloat()},
     {"SecondStationLoose", vfloat()},
@@ -62,7 +66,7 @@ void RPCMuonIdMapProducer::produce(edm::Event& event, const edm::EventSetup& eve
     edm::Ref<MuonColl> muRef(muHandle, i);
 
     // Collect matching information
-    std::set<int> matchedLoose, matchedTight;
+    std::map<int, int> matchedLoose, matchedTight;
 
     const auto& muMatches = muRef->matches();
     for ( const auto& muMatch : muMatches ) {
@@ -73,27 +77,39 @@ void RPCMuonIdMapProducer::produce(edm::Event& event, const edm::EventSetup& eve
 
       const double dx = muMatch.dist();
       const double dxErr = muMatch.distErr();
-      if ( dx < 20 or dx < 4*dxErr ) matchedLoose.insert(st);
-      if ( dx < 3 and dx < 4*dxErr ) matchedTight.insert(st);
+      if ( dx < 20 or dx < 4*dxErr ) {
+        if ( matchedLoose.count(st) == 0 ) matchedLoose[st] = 0;
+        ++matchedLoose[st];
+      }
+      if ( dx < 3 and dx < 4*dxErr ) {
+        if ( matchedTight.count(st) == 0 ) matchedTight[st] = 0;
+        ++ matchedTight[st];
+      }
     }
 
     // Calculate RPC ID based on the matching information
-    const int nMatchLoose = matchedLoose.size();
-    const int nMatchTight = matchedTight.size();
-    int nMatchLooseSSt = nMatchLoose, nMatchTightSSt = nMatchTight;
-    const int minSt = RPCDetId::minStationId;
-    const int maxSt = RPCDetId::maxStationId;
-    if ( matchedLoose.count( minSt) != 0 ) --nMatchLooseSSt;
-    if ( matchedLoose.count(-minSt) != 0 ) --nMatchLooseSSt;
-    if ( matchedTight.count( minSt) != 0 ) --nMatchTightSSt;
-    if ( matchedTight.count(-minSt) != 0 ) --nMatchTightSSt;
+    auto addSecond = [](int b, const std::pair<int, int>& a) { return b+a.second; };
+    const int nLayerLoose = std::accumulate(matchedLoose.begin(), matchedLoose.end(), 0, addSecond);
+    const int nLayerTight = std::accumulate(matchedTight.begin(), matchedTight.end(), 0, addSecond);
 
-    idMaps["Loose"].push_back(nMatchLoose>=2);
-    idMaps["Tight"].push_back(nMatchTight>=2);
+    int nLayerLooseSSt = nLayerLoose;
+    int nLayerTightSSt = nLayerTight;
+
+    const int minSt = RPCDetId::minStationId;
+    if ( matchedLoose.count( minSt) != 0 ) nLayerLooseSSt -= matchedLoose[ minSt];
+    if ( matchedLoose.count(-minSt) != 0 ) nLayerLooseSSt -= matchedLoose[-minSt]; // neg. station number for RE-? safe even if staion # is positive definite
+    if ( matchedTight.count( minSt) != 0 ) nLayerTightSSt -= matchedTight[ minSt];
+    if ( matchedTight.count(-minSt) != 0 ) nLayerTightSSt -= matchedTight[-minSt]; // neg. station number for RE-? safe even if staion # is positive definite
+
+    idMaps["Loose"].push_back(nLayerLoose>=2);
+    idMaps["Tight"].push_back(nLayerTight>=2);
+    idMaps["TwoStationLoose"].push_back(matchedLoose.size()>=2);
+    idMaps["TwoStationTight"].push_back(matchedTight.size()>=2);
+    const int maxSt = RPCDetId::maxStationId;
     idMaps["LastStationLoose"].push_back(matchedLoose.count(maxSt) != 0);
     idMaps["LastStationTight"].push_back(matchedTight.count(maxSt) != 0);
-    idMaps["SecondStationLoose"].push_back(nMatchLooseSSt>=2);
-    idMaps["SecondStationTight"].push_back(nMatchTightSSt>=2);
+    idMaps["SecondStationLoose"].push_back(nLayerLooseSSt>=2);
+    idMaps["SecondStationTight"].push_back(nLayerTightSSt>=2);
   
   }
   
