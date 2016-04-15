@@ -19,7 +19,7 @@ idSet = {
     "OneLoose":"isOneLoose", "OneTight":"isOneTight",
     "LastLowPtLoose":"isLastLowPtLoose", "LastLowPtTight":"isLastLowPtTight",
     "GMTkChi2Compat":"isGMTkChi2Compat", "GMStaChi2Compat":"isGMStaChi2Compat", "GMTkKinkTight":"isGMTkKinkTight",
-    "TMLastAngLoose":"isTMLastAngLoose", "TMLastAngTight":"TMLastAngTight", "TMOneAngLoose":"isTMOneAngLoose", "TMOneAngTight":"isTMOneAngTight",
+    "TMLastAngLoose":"isTMLastAngLoose", "TMLastAngTight":"isTMLastAngTight", "TMOneAngLoose":"isTMOneAngLoose", "TMOneAngTight":"isTMOneAngTight",
 }
 
 def project(*args):
