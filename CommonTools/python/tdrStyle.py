@@ -5,7 +5,7 @@ import ROOT
 tdrStyle = ROOT.TStyle("Plain","Style for P-TDR")
 # For the canvas:
 tdrStyle.SetCanvasBorderMode(0)
-tdrStyle.SetCanvasColor(kWhite)
+tdrStyle.SetCanvasColor(ROOT.kWhite)
 tdrStyle.SetCanvasDefH(400) #Height of canvas
 tdrStyle.SetCanvasDefW(400) #Width of canvas
 tdrStyle.SetCanvasDefX(0)   #POsition on screen
@@ -15,9 +15,9 @@ tdrStyle.SetPaintTextFormat("5.3f")
 # For the Pad:
 tdrStyle.SetPadBorderMode(0)
 #  tdrStyle.SetPadBorderSize(Width_t size = 1)
-tdrStyle.SetPadColor(kWhite)
-tdrStyle.SetPadGridX(false)
-tdrStyle.SetPadGridY(false)
+tdrStyle.SetPadColor(ROOT.kWhite)
+tdrStyle.SetPadGridX(False)
+tdrStyle.SetPadGridY(False)
 tdrStyle.SetGridColor(0)
 tdrStyle.SetGridStyle(3)
 tdrStyle.SetGridWidth(1)
@@ -63,7 +63,7 @@ tdrStyle.SetOptDate(0)
 tdrStyle.SetOptFile(0)
 #  tdrStyle.SetOptStat("mr") # To display the mean and RMS:   SetOptStat("mr")
 tdrStyle.SetOptStat(0)
-tdrStyle.SetStatColor(kWhite)
+tdrStyle.SetStatColor(ROOT.kWhite)
 tdrStyle.SetStatFont(42)
 tdrStyle.SetStatFontSize(0.025)
 tdrStyle.SetStatTextColor(1)
@@ -117,7 +117,7 @@ tdrStyle.SetLabelSize(0.05, "XYZ")
 # For the axis:
 
 tdrStyle.SetAxisColor(1, "XYZ")
-tdrStyle.SetStripDecimals(kTRUE)
+tdrStyle.SetStripDecimals(True)
 tdrStyle.SetTickLength(0.03, "XYZ")
 tdrStyle.SetNdivisions(510, "XYZ")
 tdrStyle.SetPadTickX(1)  # To get tick marks on the opposite side of the frame
@@ -141,7 +141,7 @@ tdrStyle.SetPaperSize(15.,15.)
 # tdrStyle.SetPaintTextFormat(const char* format = "g")
 # tdrStyle.SetPalette(Int_t ncolors = 0, Int_t* colors = 0)
 # tdrStyle.SetTimeOffset(Double_t toffset)
-# tdrStyle.SetHistMinimumZero(kTRUE)
+# tdrStyle.SetHistMinimumZero(True)
 
 ROOT.gROOT.ForceStyle()
 tdrStyle.cd()

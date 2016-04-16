@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from ROOT import *
 from math import *
-#gROOT.ProcessLine(".x CMS/rootlogon.C")
+from SKKU.CommonTools.tdrStyle import *
 #gROOT.SetBatch(kTRUE)
 gStyle.SetOptStat(0)
 
@@ -53,6 +53,7 @@ for i, hName in enumerate(hNames):
     hRef.SetMarkerStyle(20)
     hRef.SetLineColor(refInput[1])
     hRef.SetMarkerColor(refInput[1])
+    hRef.GetXaxis().SetLabelSize(0.03)
     hRef.Draw("e")
 
     fRatio = hRef.Clone()
@@ -60,8 +61,8 @@ for i, hName in enumerate(hNames):
     fRatio.SetTitle("")
     fRatio.SetMinimum(0.8)
     fRatio.SetMaximum(1.2)
-    fRatio.GetXaxis().SetLabelSize(0.08)
-    fRatio.GetYaxis().SetLabelSize(0.07)
+    fRatio.GetXaxis().SetLabelSize(0.10)
+    fRatio.GetYaxis().SetLabelSize(0.10)
     fRatio.GetYaxis().SetNdivisions(505)
     pad2.cd()
     fRatio.Draw()
