@@ -813,8 +813,12 @@ std::vector<int> MuonMisIDNtupleMaker::matchByDR(const T1& etas, const T1& phis,
   for ( int i=0; i<n; ++i ) {
     const auto eta = etas[i], phi = phis[i];
     for ( int j=0; j<m; ++j ) {
-      const auto& p = coll.at(j);
-      const double dR2 = deltaR2(p.eta(), p.phi(), eta, phi);
+      const auto trk = coll.at(j).innerTrack();
+      if ( trk.isNull() ) continue;
+
+      const double trkPhi = trk->phi();
+      const double trkEta = trk->eta();
+      const double dR2 = deltaR2(trkEta, trkPhi, eta, phi);
       matches[dR2] = make_pair(i, j);
     }
   }
