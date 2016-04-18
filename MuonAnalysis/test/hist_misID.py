@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-import sys, os
+import os
 from ROOT import *
-from multiprocessing import Pool
 
 modeSet = {
     "ks":{"massbin":(100,0.45, 0.55), "ptbins":[4, 5, 6, 8, 10, 15, 20, 30, 50, 200], "aetabins":[0, 0.9, 1.2, 1.6, 2.4],},
@@ -108,19 +107,38 @@ def project(dirName, mode, fName):
     print "@@ Finished", fName
 
 if __name__ == '__main__':
+    import sys
 
-    #eosBase = "/afs/cern.ch/user/j/jhgoh/eos/cms/store/user/jhgoh/MuonMisID/20160412_1"
     eosBase = "root://eoscms//eos/cms/store/user/jhgoh/MuonMisID/20160412_1"
-    filesRD = ['%s/JetHT_2015D/JetHT/crab_20160412_152954/160412_133018/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,162)]
-    filesMC = ['%s/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160412_153031/160412_133052/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,629)]
+    #eosBase = "/afs/cern.ch/user/j/jhgoh/eos/cms/store/user/jhgoh/MuonMisID/20160412_1"
 
-    p = Pool(processes = 8)
-    for mode in modeSet:
+    if len(sys.argv) == 1:
+        from multiprocessing import Pool
+        ## To run on a multicore host
+        filesRD = ['%s/JetHT_2015D/JetHT/crab_20160412_152954/160412_133018/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,162)]
+        filesMC = ['%s/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160412_153031/160412_133052/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,629)]
+
+        p = Pool(processes = 8)
+        for mode in modeSet:
+            if not os.path.exists("RD/%s" % mode): os.makedirs("RD/%s" % mode)
+            if not os.path.exists("MC/%s" % mode): os.makedirs("MC/%s" % mode)
+
+            for fName in filesRD: p.apply_async(project, ["RD", mode, fName])
+            for fName in filesMC: p.apply_async(project, ["MC", mode, fName])
+        p.close()
+        p.join()
+    else:
+        ## To run on single core with one file
+        dataType, mode, fileIndex = sys.argv[1:]
+        fileIndex = int(fileIndex)
+
         if not os.path.exists("RD/%s" % mode): os.makedirs("RD/%s" % mode)
         if not os.path.exists("MC/%s" % mode): os.makedirs("MC/%s" % mode)
 
-        for fName in filesRD: p.apply_async(project, ["RD", mode, fName])
-        for fName in filesMC: p.apply_async(project, ["MC", mode, fName])
-    p.close()
-    p.join()
+        if dataType == 'RD':
+            f = '%s/JetHT_2015D/JetHT/crab_20160412_152954/160412_133018/0000/ntuple_%d.root' % (eosBase, fileIndex)
+            project(dataType, mode, f)
+        elif dataType == 'MC':
+            f = '%s/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160412_153031/160412_133052/0000/ntuple_%d.root' % (eosBase, fileIndex)
+            project(dataType, mode, f)
 
