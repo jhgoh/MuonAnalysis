@@ -75,7 +75,6 @@ def project(dirName, mode, fName):
                 hFail.Write()
 
     for aetabin in range(len(aetabins)-1):
-        print "@@@@ ", os.path.basename(fName), "aetabin", aetabin
         minAeta, maxAeta = aetabins[aetabin], aetabins[aetabin+1]
         for leg in range(2):
             print "@@@@ Building event list", os.path.basename(fName), "aetabin", aetabin, "...",
