@@ -29,14 +29,13 @@ def makedirs(d, path):
         d = dd
     return d
 
-def project(*args):
-    dirName, mode, fName = args[0]
+def project(dirName, mode, fName):
     print "@@ Processing", fName
 
     ptbins = modeSet[mode]["ptbins"]
     aetabins = modeSet[mode]["aetabins"]
     nbins, minMass, maxMass = modeSet[mode]["massbin"]
-    binW = (maxMass-minMass)/nbins
+    binW = 1000*(maxMass-minMass)/nbins ## in MeV unit
 
     if fName.startswith("root://"): f = TNetXNGFile(fName)
     else: f = TFile(fName)
@@ -47,9 +46,9 @@ def project(*args):
     fout.cd()
 
     eventList = TEventList("eventList");
-    bins = []
+    eventList.SetDirectory(0)
     for ptbin in range(len(ptbins)-1):
-        minPt, maxPt = ptbins[i], ptbins[i+1]
+        minPt, maxPt = ptbins[ptbin], ptbins[ptbin+1]
         for leg in range(2):
             cutBin = "trk_pt[%d] >= %f && trk_pt[%d] < %f" % (leg, minPt, leg, maxPt)
             print "@@@@ Building event list", os.path.basename(fName), "ptbin", ptbin, "...",
@@ -120,6 +119,8 @@ if __name__ == '__main__':
         if not os.path.exists("RD/%s" % mode): os.makedirs("RD/%s" % mode)
         if not os.path.exists("MC/%s" % mode): os.makedirs("MC/%s" % mode)
 
-        p.map(project, zip(["RD"]*len(filesRD), [mode]*len(filesRD), filesRD))
-        p.map(project, zip(["MC"]*len(filesMC), [mode]*len(filesMC), filesMC))
+        for fName in filesRD: p.apply_async(project, ["RD", mode, fName])
+        for fName in filesMC: p.apply_async(project, ["MC", mode, fName])
+    p.close()
+    p.join()
 
