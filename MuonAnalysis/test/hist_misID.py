@@ -112,8 +112,8 @@ if __name__ == '__main__':
 
     #eosBase = "/afs/cern.ch/user/j/jhgoh/eos/cms/store/user/jhgoh/MuonMisID/20160412_1"
     eosBase = "root://eoscms//eos/cms/store/user/jhgoh/MuonMisID/20160412_1"
-    filesRD = ['%s/JetHT_2015D/JetHT/crab_20160412_152954/160412_133018/0000/hist_%d.root' % (eosBase, i) for i in range(1,2)]#,162)]
-    filesMC = ['%s/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160412_153031/160412_133052/0000/hist_%d.root' % (eosBase, i) for i in range(1, 2)]#629)]
+    filesRD = ['%s/JetHT_2015D/JetHT/crab_20160412_152954/160412_133018/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,162)]
+    filesMC = ['%s/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160412_153031/160412_133052/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,629)]
 
     p = Pool(processes = 8)
     for mode in modeSet:

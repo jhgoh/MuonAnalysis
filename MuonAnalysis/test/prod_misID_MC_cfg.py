@@ -31,7 +31,7 @@ process.source.fileNames = [
 process.load("SKKU.MuonAnalysis.muonMisIDNtupleMaker_cff")
 
 process.TFileService = cms.Service("TFileService",
-    fileName = cms.string("hist.root"),
+    fileName = cms.string("ntuple.root"),
 )
 
 process.p = cms.Path(
