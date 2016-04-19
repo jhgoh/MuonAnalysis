@@ -7,6 +7,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1) )
 
 from SKKU.RPCMuonAnalysis.tp_fit_template_cff import *
 process.tnp = fitTemplate.clone()
+process.tnp.InputFileNames = cms.vstring()
 process.tnp.Efficiencies.RPC_voigtExpo.UnbinnedVariables = cms.vstring("mass")#, "weight")
 process.tnp.OutputFileName = cms.string("tp_fit_DYJets_MG.root")
 
@@ -16,7 +17,7 @@ import sys
 if len(sys.argv) > 2:
     #wp can be RPC, or combinations of (RPC, RPCLSt, RPCSSt, RPCTSt) x (Loose, Tight)
     wp = sys.argv[2]
-    setattr(process.tnp.Categories, wp, cms.vstring(wp, "dummy[pass=1,fail=0]")
+    setattr(process.tnp.Categories, wp, cms.vstring(wp, "dummy[pass=1,fail=0]"))
     for key in process.tnp.Efficiencies.parameters_().keys():
         if not hasattr(getattr(process.tnp.Efficiencies, key), 'EfficiencyCategoryAndState'): continue
         getattr(process.tnp.Efficiencies, key).EfficiencyCategoryAndState = [wp, 'pass']
