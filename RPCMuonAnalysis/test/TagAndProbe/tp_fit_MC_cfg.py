@@ -16,6 +16,7 @@ import sys
 if len(sys.argv) > 2:
     #wp can be RPC, or combinations of (RPC, RPCLSt, RPCSSt, RPCTSt) x (Loose, Tight)
     wp = sys.argv[2]
+    setattr(process.tnp.Categories, wp, cms.vstring(wp, "dummy[pass=1,fail=0]")
     for key in process.tnp.Efficiencies.parameters_().keys():
         if not hasattr(getattr(process.tnp.Efficiencies, key), 'EfficiencyCategoryAndState'): continue
         getattr(process.tnp.Efficiencies, key).EfficiencyCategoryAndState = [wp, 'pass']
