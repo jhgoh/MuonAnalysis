@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 from ROOT import *
+from array import array
 
 modeSet = {
     "ks":{"massbin":(100,0.45, 0.55), "ptbins":[4, 5, 6, 8, 10, 15, 20, 30, 50, 200], "aetabins":[0, 0.9, 1.2, 1.6, 2.4],},
@@ -43,15 +44,16 @@ def project(dirName, mode, fName):
 
     fout = TFile("%s/%s/%s" % (dirName, mode, os.path.basename(fName)), "RECREATE")
     fout.cd()
+    modedir = fout.mkdir(mode)
 
-    eventList = TEventList("eventList");
-    eventList.SetDirectory(0)
+    modedir.cd()
+    hptbins = TH1D("hptbins", "ptbins;p_{T} (GeV)", len(ptbins)-1, array('d', ptbins))
+    hptbins.SetDirectory(modedir)
     for ptbin in range(len(ptbins)-1):
         minPt, maxPt = ptbins[ptbin], ptbins[ptbin+1]
         for leg in range(2):
             cutBin = "trk_pt[%d] >= %f && trk_pt[%d] < %f" % (leg, minPt, leg, maxPt)
             print "@@@@ Building event list", os.path.basename(fName), "ptbin", ptbin, "...",
-            tree.Draw(">>eventList", "(%s) && (%s)" % (precut, cutBin))
             print "done"
 
             for idName in idSet:
@@ -69,17 +71,18 @@ def project(dirName, mode, fName):
 
                 hPass = TH1D("hPass", "Passing;Mass (GeV);Candidates per %f MeV" % binW, nbins, minMass, maxMass)
                 hFail = TH1D("hFail", "Failing;Mass (GeV);Candidates per %f MeV" % binW, nbins, minMass, maxMass)
-                tree.Draw("vtx_mass>>hPass", " (%s)" % cutID, "goff")
-                tree.Draw("vtx_mass>>hFail", "!(%s)" % cutID, "goff")
+                tree.Draw("vtx_mass>>hPass", cutStrObjPass.GetString().Data(), "goff")
+                tree.Draw("vtx_mass>>hFail", cutStrObjFail.GetString().Data(), "goff")
                 hPass.Write()
                 hFail.Write()
 
+    haetabins = TH1D("haetabins", "aetabins;|#eta|", len(aetabins)-1, array('d', aetabins))
+    hptbins.SetDirectory(modedir)
     for aetabin in range(len(aetabins)-1):
         minAeta, maxAeta = aetabins[aetabin], aetabins[aetabin+1]
         for leg in range(2):
             print "@@@@ Building event list", os.path.basename(fName), "aetabin", aetabin, "...",
             cutBin = "fabs(trk_eta[%d]) >= %f && fabs(trk_eta[%d]) < %f" % (leg, minAeta, leg, maxAeta)
-            tree.Draw(">>eventList", "(%s) && (%s)" % (precut, cutBin))
             print "done"
 
             for idName in idSet:
@@ -97,8 +100,8 @@ def project(dirName, mode, fName):
 
                 hPass = TH1D("hPass", "Passing;Mass (GeV);Candidates per %f MeV" % binW, nbins, minMass, maxMass)
                 hFail = TH1D("hFail", "Failing;Mass (GeV);Candidates per %f MeV" % binW, nbins, minMass, maxMass)
-                tree.Draw("vtx_mass>>hPass", " (%s)" % cutID, "goff")
-                tree.Draw("vtx_mass>>hFail", "!(%s)" % cutID, "goff")
+                tree.Draw("vtx_mass>>hPass", cutStrObjPass.GetString().Data(), "goff")
+                tree.Draw("vtx_mass>>hFail", cutStrObjFail.GetString().Data(), "goff")
                 hPass.Write()
                 hFail.Write()
 
@@ -114,8 +117,8 @@ if __name__ == '__main__':
     if len(sys.argv) == 1:
         from multiprocessing import Pool
         ## To run on a multicore host
-        filesRD = ['%s/JetHT_2015D/JetHT/crab_20160412_152954/160412_133018/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,162)]
-        filesMC = ['%s/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160412_153031/160412_133052/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,629)]
+        filesRD = ['%s/JetHT_2015D/JetHT/crab_20160412_152954/160412_133018/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,2)]#162)]
+        filesMC = ['%s/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160412_153031/160412_133052/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,2)]#629)]
 
         p = Pool(processes = 8)
         for mode in modeSet:
