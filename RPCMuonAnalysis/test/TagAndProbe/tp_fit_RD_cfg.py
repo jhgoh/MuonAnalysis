@@ -17,10 +17,12 @@ import sys
 if len(sys.argv) > 2:
     #wp can be RPC, or combinations of (RPC, RPCLSt, RPCSSt, RPCTSt) x (Loose, Tight)
     wp = sys.argv[2]
-    setattr(process.tnp.Categories, wp, cms.vstring(wp, "dummy[pass=1,fail=0]"))
+    setattr(process.tnp.Cuts, 'cut'+wp, cms.vstring('cut'+wp, wp, "0.5"))
+    setattr(process.tnp.Variables, wp, cms.vstring('%s WP' % wp, '-1', '2', ''))
+    #setattr(process.tnp.Categories, wp, cms.vstring(wp, "dummy[pass=1,fail=0]"))
     for key in process.tnp.Efficiencies.parameters_().keys():
         if not hasattr(getattr(process.tnp.Efficiencies, key), 'EfficiencyCategoryAndState'): continue
-        getattr(process.tnp.Efficiencies, key).EfficiencyCategoryAndState = [wp, 'pass']
+        getattr(process.tnp.Efficiencies, key).EfficiencyCategoryAndState = ['cut'+wp, 'above']
     process.tnp.OutputFileName = "tp_fit_SingleMuon_Run2015D_%s.root" % wp
 
 for i in range(1, 162):

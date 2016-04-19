@@ -20,6 +20,7 @@ fitTemplate = cms.EDAnalyzer("TagProbeFitTreeAnalyzer",
     ),
 
     Cuts = cms.PSet(),
+    Expressions = cms.PSet(),
 
     PDFs = cms.PSet(
         voigtPlusExpo = cms.vstring(
