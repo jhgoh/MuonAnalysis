@@ -4,8 +4,6 @@ import sys, os
 from ROOT import *
 from SKKU.CommonTools.tdrStyle import *
 
-objs = []
-
 def makedirs(d, path):
     for p in path.split('/'):
         if p == '': continue
@@ -14,7 +12,7 @@ def makedirs(d, path):
         d = dd
     return d
 
-def fit(hA, hB, c = None):
+def fit(hA, hB, canvas = None, outdir = None):
     nA = hA.Integral()
     nB = hB.Integral()
     nTotal = nA+nB
@@ -33,13 +31,24 @@ def fit(hA, hB, c = None):
     getattr(ws, 'import')(hDataA, RooCmdArg())
     getattr(ws, 'import')(hDataB, RooCmdArg())
 
-    ws.factory("m0[%f,%f,%f]" % ((massMax+massMin)/2, massMin, massMax))
-    if "ks" in mode: ws.factory("Voigtian::sigA(mass, m0, w0[1e-2, 5e-3, 2e-2], sigmaA[1e-2, 1e-3, 1e-1])")
-    elif "phi" in mode: ws.factory("Voigtian::sigA(mass, m0, w0[5e-3, 1e-3, 2e-2], sigmaA[2e-3, 1e-3, 5e-3])")
-    elif "lamb" in mode: ws.factory("Voigtian::sigA(mass, m0, w0[1e-2, 1e-3, 2e-2], sigmaA[2e-2, 5e-3, 5e-2])")
-    ws.factory("Voigtian::sigB(mass, m0, w0, sigmaA)")
-    ws.factory("Chebychev::bkgA(mass, {p0A[0, -5, 5], p1A[0, -5, 5]})")
-    ws.factory("Chebychev::bkgB(mass, {p0B[0, -5, 5], p1B[0, -5, 5]})")
+    if "ks" in mode:
+        ws.factory("m0[%f,%f,%f]" % ((massMax+massMin)/2, massMin, massMax))
+        ws.factory("Voigtian::sigA(mass, m0, w0[1e-2, 5e-3, 2e-2], sigmaA[1e-2, 1e-3, 1e-1])")
+        ws.factory("Voigtian::sigB(mass, m0, w0, sigmaA)")
+        ws.factory("Chebychev::bkgA(mass, {p0A[0, -5, 5], p1A[0, -5, 5]})")
+        ws.factory("Chebychev::bkgB(mass, {p0B[0, -5, 5], p1B[0, -5, 5]})")
+    elif "phi" in mode:
+        ws.factory("m0[%f,%f,%f]" % ((massMax+massMin)/2, massMin, massMax))
+        ws.factory("Voigtian::sigA(mass, m0, sigmaA[2e-3, 1e-3, 5e-3])")
+        ws.factory("Voigtian::sigB(mass, m0, sigmaA)")
+        ws.factory("Chebychev::bkgA(mass, {p0A[0, -5, 5], p1A[0, -5, 5]})")
+        ws.factory("Chebychev::bkgB(mass, {p0B[0, -5, 5], p1B[0, -5, 5]})")
+    elif "lamb" in mode:
+        ws.factory("m0[1.15,1.1,1.12]")
+        ws.factory("Gaussian::sigA(mass, m0, sigmaA[5e-4, 1e-4, 2e-3])")
+        ws.factory("Gaussian::sigB(mass, m0, sigmaA)")
+        ws.factory("Chebychev::bkgA(mass, {p0A[0, -5, 5], p1A[0, -5, 5], p2A[0, -5, 5]})")
+        ws.factory("Chebychev::bkgB(mass, {p0B[0, -5, 5], p1B[0, -5, 5], p2B[0, -5, 5]})")
     ws.factory("ratio[0.003, 0, 1]")
     ws.factory("EXPR::nSigA('nSig*ratio', nSig[%f,0,%f], ratio)" % (0.5*nTotal, 1.1*nTotal))
     ws.factory("EXPR::nSigB('nSig*(1-ratio)', nSig, ratio)")
@@ -85,6 +94,7 @@ def fit(hA, hB, c = None):
     RooMsgService.instance().setGlobalKillBelow(RooFit.ERROR)
 
     if c != None:
+        print "@@@ Plotting mass distributions @@@"
         frameA = mass.frame()
         dataSim.plotOn(frameA, RooFit.Cut("index==index::A"))
         proj = RooFit.ProjWData(RooArgSet(ws.index), dataSim)
@@ -99,18 +109,19 @@ def fit(hA, hB, c = None):
         simPdf.plotOn(frameB, s, proj, RooFit.LineColor(kRed))
         simPdf.plotOn(frameB, s, proj, RooFit.LineColor(kRed), RooFit.Components("bkgB"), RooFit.LineStyle(kDashed))
 
-
-        c.Divide(2,2)
-        c.cd(1)
+        print "@@@ Plotting NLL @@@"
+        canvas.Divide(2,2)
+        canvas.cd(1)
         frameA.Draw()
-        c.cd(2)
+        canvas.cd(2)
         frameB.Draw()
-        c.cd(3)
+        canvas.cd(3)
         frameNLL = ws.var("ratio").frame(RooFit.Range(0, 2e-2))
         nll.plotOn(frameNLL, RooFit.Range(0,2e-2))
         frameNLL.Draw()
 
-        c.cd(4)
+        print "@@@ Printing fit results @@@"
+        canvas.cd(4)
         l = TPaveText(0,0,1,1)
         l.SetTextAlign(11)
         l.SetFillStyle(0)
@@ -123,7 +134,10 @@ def fit(hA, hB, c = None):
             else:
                 l.AddText(" %s = %f +- %f" % (par.GetName(), par.getVal(), par.getError()))
         l.Draw()
-        objs.append(l)
+
+        if outdir != None:
+            outdir.cd()
+            canvas.Write()
 
     ws = None
     ratio = result.floatParsFinal().find('ratio')
@@ -146,6 +160,7 @@ if __name__ == '__main__':
         idDir1 = modeDir.GetDirectory("%s_leg1" % idName)
         idDir2 = modeDir.GetDirectory("%s_leg2" % idName)
         for varName in [x.GetName() for x in idDir1.GetListOfKeys()]:
+            print '=====', mode, idName, varName, '====='
             varDir1 = idDir1.Get(varName)
             varDir2 = idDir2.Get(varName)
             hFrame = varDir1.Get("hFrame")
@@ -173,6 +188,7 @@ if __name__ == '__main__':
 
             for b in range(hFrame.GetNbinsX()):
                 bb = b+1
+                print '====== bin', bb, '======'
                 hA1 = varDir1.Get("bin%d/hPass" % (bb))
                 hB1 = varDir1.Get("bin%d/hFail" % (bb))
                 hA2 = varDir2.Get("bin%d/hPass" % (bb))
@@ -184,22 +200,22 @@ if __name__ == '__main__':
                 if mode == 'lamb':
                     varDirOut1.cd()
                     c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
-                    res = fit(hA1, hB1, c)
+                    res = fit(hA1, hB1, c, varDirOut1)
                     c.Write()
 
                     y = res.getVal()
-                    if res.hasAsymError(): ey1, ey2 = res.getErrorHi(), res.getErrorLo()
-                    else:  ey1, ey2 = res.getError(), res.getError()
+                    if res.hasAsymError(): eyHi, eyLo = res.getErrorHi(), res.getErrorLo()
+                    else:  eyHi, eyLo = res.getError(), res.getError()
 
                     gRatio1.SetPoint(b, x, y)
-                    gRatio1.SetPointError(b, ex, ex, eyLo, eyHi)
+                    gRatio1.SetPointError(b, ex, ex, abs(eyLo), eyHi)
 
                 elif mode == 'ks':
                     varDirOut1.cd()
-                    c = TCanvas("c", "c", 500, 500)
+                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
                     hA1.Add(hA2)
                     hB1.Add(hB2)
-                    res = fit(hA1, hB1, c)
+                    res = fit(hA1, hB1, c, varDirOut1)
                     c.Write()
 
                     y = res.getVal()
@@ -207,12 +223,12 @@ if __name__ == '__main__':
                     else:  eyHi, eyLo = res.getError(), res.getError()
 
                     gRatio1.SetPoint(b, x, y)
-                    gRatio1.SetPointError(b, ex, ex, eyLo, eyHi)
+                    gRatio1.SetPointError(b, ex, ex, abs(eyLo), eyHi)
 
                 elif mode == 'phi':
                     varDirOut1.cd()
-                    c = TCanvas("c", "c", 500, 500)
-                    res = fit(hA1, hB1, c)
+                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
+                    res = fit(hA1, hB1, c, varDirOut1)
                     c.Write()
 
                     y = res.getVal()
@@ -220,11 +236,11 @@ if __name__ == '__main__':
                     else:  eyHi, eyLo = res.getError(), res.getError()
 
                     gRatio1.SetPoint(b, x, y)
-                    gRatio1.SetPointError(b, ex, ex, eyLo, eyHi)
+                    gRatio1.SetPointError(b, ex, ex, abs(eyLo), eyHi)
 
                     varDirOut2.cd()
-                    c = TCanvas("c", "c", 500, 500)
-                    res = fit(hA2, hB2, c)
+                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
+                    res = fit(hA2, hB2, c, varDirOut2)
                     c.Write()
 
                     y = res.getVal()
@@ -232,10 +248,12 @@ if __name__ == '__main__':
                     else:  eyHi, eyLo = res.getError(), res.getError()
 
                     gRatio2.SetPoint(b, x, y)
-                    gRatio2.SetPointError(b, ex, ex, eyLo, eyHi)
+                    gRatio2.SetPointError(b, ex, ex, abs(eyLo), eyHi)
+            varDirOut1.cd()
+            hFrame.Clone().Write()
             gRatio1.Write()
-            if gRatio2 in locals(): gRatio2.Write()
-            break
-        break
-
+            if 'gRatio2' in locals():
+                varDirOut2.cd()
+                hFrame.Clone().Write()
+                gRatio2.Write()
 
