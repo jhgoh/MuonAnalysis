@@ -5,6 +5,15 @@ from ROOT import *
 from SKKU.CommonTools.tdrStyle import *
 
 objs = []
+
+def makedirs(d, path):
+    for p in path.split('/'):
+        if p == '': continue
+        dd = d.GetDirectory(p)
+        if dd == None: dd = d.mkdir(p)
+        d = dd
+    return d
+
 def fit(hA, hB, c = None):
     nA = hA.Integral()
     nB = hB.Integral()
@@ -116,29 +125,117 @@ def fit(hA, hB, c = None):
         l.Draw()
         objs.append(l)
 
+    ws = None
     ratio = result.floatParsFinal().find('ratio')
     return ratio
 
 if __name__ == '__main__':
+    gROOT.SetBatch(1)
+
     mode = sys.argv[1]
     fNameIn, fNameOut = sys.argv[2], sys.argv[3]
 
     fIn = TFile(fNameIn)
+    fOut = TFile(fNameOut, "RECREATE")
 
-    hA = fIn.Get("ks/RPC/leg1_ptbin0/hPass")
-    hB = fIn.Get("ks/RPC/leg2_ptbin0/hFail")
+    modeDir = fIn.GetDirectory(mode)
+    if modeDir == None: os.exit(1)
+    modeDirOut = fOut.mkdir(mode)
 
-    c = TCanvas("c", "c", 500, 500)
-    fit(hA, hB, c)
-#    fOut = TFile(fNameOut, "RECREATE")
+    for idName in set([x.GetName()[:-5] for x in modeDir.GetListOfKeys()]):
+        idDir1 = modeDir.GetDirectory("%s_leg1" % idName)
+        idDir2 = modeDir.GetDirectory("%s_leg2" % idName)
+        for varName in [x.GetName() for x in idDir1.GetListOfKeys()]:
+            varDir1 = idDir1.Get(varName)
+            varDir2 = idDir2.Get(varName)
+            hFrame = varDir1.Get("hFrame")
 
-#for catName in [x.GetName() for x in fIn.GetListOfKeys()]:
-#    catDir = fIn.GetDirectory(catName)
-#    if catDir == None: continue
-#    catDirOut = fIn.mkdir(catName)
-#for varName in [x.GetName() for x in catDir.GetListOfKeys()]:
-#    varDir = catDir.GetDirectory(varName)
-#    if varDir == None: continue
-#    hFrame = varDir.Get("hFrame")
-        
+            if mode == 'lamb':
+                varDirOut1 = makedirs(fOut, '/'.join(['proton', idName, varName]))
+                varDirOut1.cd()
+                hFrame.Clone().Write()
+                gRatio1 = TGraphAsymmErrors()
+                gRatio1.SetName("gRatio")
+            elif mode == 'ks':
+                varDirOut1 = makedirs(fOut, '/'.join(['pion', idName, varName]))
+                varDirOut1.cd()
+                gRatio1 = TGraphAsymmErrors()
+                gRatio1.SetName("gRatio")
+            elif mode == 'phi':
+                varDirOut1 = makedirs(fOut, '/'.join(['Kp', idName, varName]))
+                varDirOut1.cd()
+                gRatio1 = TGraphAsymmErrors()
+                gRatio1.SetName("gRatio")
+                varDirOut2 = makedirs(fOut, '/'.join(['Km', idName, varName]))
+                varDirOut2.cd()
+                gRatio2 = TGraphAsymmErrors()
+                gRatio2.SetName("gRatio")
+
+            for b in range(hFrame.GetNbinsX()):
+                bb = b+1
+                hA1 = varDir1.Get("bin%d/hPass" % (bb))
+                hB1 = varDir1.Get("bin%d/hFail" % (bb))
+                hA2 = varDir2.Get("bin%d/hPass" % (bb))
+                hB2 = varDir2.Get("bin%d/hFail" % (bb))
+
+                x  = hFrame.GetXaxis().GetBinCenter(bb)
+                ex = hFrame.GetXaxis().GetBinWidth(bb)/2
+
+                if mode == 'lamb':
+                    varDirOut1.cd()
+                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
+                    res = fit(hA1, hB1, c)
+                    c.Write()
+
+                    y = res.getVal()
+                    if res.hasAsymError(): ey1, ey2 = res.getErrorHi(), res.getErrorLo()
+                    else:  ey1, ey2 = res.getError(), res.getError()
+
+                    gRatio1.SetPoint(b, x, y)
+                    gRatio1.SetPointError(b, ex, ex, eyLo, eyHi)
+
+                elif mode == 'ks':
+                    varDirOut1.cd()
+                    c = TCanvas("c", "c", 500, 500)
+                    hA1.Add(hA2)
+                    hB1.Add(hB2)
+                    res = fit(hA1, hB1, c)
+                    c.Write()
+
+                    y = res.getVal()
+                    if res.hasAsymError(): eyHi, eyLo = res.getErrorHi(), res.getErrorLo()
+                    else:  eyHi, eyLo = res.getError(), res.getError()
+
+                    gRatio1.SetPoint(b, x, y)
+                    gRatio1.SetPointError(b, ex, ex, eyLo, eyHi)
+
+                elif mode == 'phi':
+                    varDirOut1.cd()
+                    c = TCanvas("c", "c", 500, 500)
+                    res = fit(hA1, hB1, c)
+                    c.Write()
+
+                    y = res.getVal()
+                    if res.hasAsymError(): eyHi, eyLo = res.getErrorHi(), res.getErrorLo()
+                    else:  eyHi, eyLo = res.getError(), res.getError()
+
+                    gRatio1.SetPoint(b, x, y)
+                    gRatio1.SetPointError(b, ex, ex, eyLo, eyHi)
+
+                    varDirOut2.cd()
+                    c = TCanvas("c", "c", 500, 500)
+                    res = fit(hA2, hB2, c)
+                    c.Write()
+
+                    y = res.getVal()
+                    if res.hasAsymError(): eyHi, eyLo = res.getErrorHi(), res.getErrorLo()
+                    else:  eyHi, eyLo = res.getError(), res.getError()
+
+                    gRatio2.SetPoint(b, x, y)
+                    gRatio2.SetPointError(b, ex, ex, eyLo, eyHi)
+            gRatio1.Write()
+            if gRatio2 in locals(): gRatio2.Write()
+            break
+        break
+
 
