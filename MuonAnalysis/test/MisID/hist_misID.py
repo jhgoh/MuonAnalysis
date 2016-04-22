@@ -4,9 +4,18 @@ from ROOT import *
 from array import array
 
 modeSet = {
-    "ks":{"massbin":(100,0.45, 0.55), "ptbins":[4, 5, 6, 8, 10, 15, 20, 30, 50, 200], "aetabins":[0, 0.9, 1.2, 1.6, 2.4],},
-    "phi":{"massbin":(100,0.99,1.06), "ptbins":[4, 5, 6, 8, 10, 15, 20, 30, 50, 200], "aetabins":[0, 0.9, 1.2, 1.6, 2.4],},
-    "lamb":{"massbin":(100,1.08,1.22), "ptbins":[4, 5, 6, 8, 10, 15, 20, 30, 50, 200], "aetabins":[0, 0.9, 1.2, 1.6, 2.4],},
+    "ks":{"massbin":(100,0.45, 0.55), "vars":{
+        "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 50, 200]},
+        "abseta":{'expr':'fabs(trk_eta[%d])','title':'|#eta|','bins':[0, 0.9, 1.2, 1.6, 2.4]},
+    }},
+    "phi":{"massbin":(100,0.99,1.06), "vars":{
+        "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 50, 200]},
+        "abseta":{'expr':'fabs(trk_eta[%d])','title':'|#eta|','bins':[0, 0.9, 1.2, 1.6, 2.4]},
+    }},
+    "lamb":{"massbin":(100,1.08,1.22), "vars":{
+        "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 50, 200]},
+        "abseta":{'expr':'fabs(trk_eta[%d])','title':'|#eta|','bins':[0, 0.9, 1.2, 1.6, 2.4]},
+    }},
 }
 
 precut = "1"
@@ -22,20 +31,12 @@ idSet = {
     "TMLastAngLoose":"isTMLastAngLoose", "TMLastAngTight":"isTMLastAngTight", "TMOneAngLoose":"isTMOneAngLoose", "TMOneAngTight":"isTMOneAngTight",
 }
 
-def makedirs(d, path):
-    for p in path.split('/'):
-        dd = d.GetDirectory(p)
-        if dd == None: dd = d.mkdir(p)
-        d = dd
-    return d
-
 def project(dirName, mode, fName):
     print "@@ Processing", fName
 
-    ptbins = modeSet[mode]["ptbins"]
-    aetabins = modeSet[mode]["aetabins"]
     nbins, minMass, maxMass = modeSet[mode]["massbin"]
     binW = 1000*(maxMass-minMass)/nbins ## in MeV unit
+    xyTitles = "Mass (GeV);Candidates per %f MeV" % binW
 
     if fName.startswith("root://"): f = TNetXNGFile(fName)
     else: f = TFile(fName)
@@ -43,67 +44,42 @@ def project(dirName, mode, fName):
     tree = f.Get("%s/tree" % mode)
 
     fout = TFile("%s/%s/%s" % (dirName, mode, os.path.basename(fName)), "RECREATE")
-    fout.cd()
     modedir = fout.mkdir(mode)
-
     modedir.cd()
-    hptbins = TH1D("hptbins", "ptbins;p_{T} (GeV)", len(ptbins)-1, array('d', ptbins))
-    hptbins.SetDirectory(modedir)
-    for ptbin in range(len(ptbins)-1):
-        minPt, maxPt = ptbins[ptbin], ptbins[ptbin+1]
+
+    varSet = modeSet[mode]["vars"]
+
+    for idName in idSet:
         for leg in range(2):
-            cutBin = "trk_pt[%d] >= %f && trk_pt[%d] < %f" % (leg, minPt, leg, maxPt)
-            print "@@@@ Building event list", os.path.basename(fName), "ptbin", ptbin, "...",
-            print "done"
+            cutID = "mu_dR[%d]<0.01 && mu_%s[%d]" % (leg, idSet[idName], leg)
+            idDir = modedir.mkdir("%s_leg%d" % (idName, leg+1))
+            for varName in varSet:
+                print "%s/%s/%s" % (idName, leg, varName)
+                varDir = idDir.mkdir(varName)
 
-            for idName in idSet:
-                cutID = "mu_dR[%d]<0.01 && mu_%s[%d]" % (leg, idSet[idName], leg)
+                bins = varSet[varName]['bins']
+                title = varSet[varName]['title']
+                expr = varSet[varName]['expr']
 
-                outdir = makedirs(fout, "%s/%s/leg%d_ptbin%d" % (mode, idName, leg+1, ptbin))
-                outdir.cd()
+                varDir.cd()
+                hFrame = TH1D("hFrame", "%s;%s" % (varName, title), len(bins)-1, array('d', bins))
+                hFrame.Write()
 
-                cutStrObjPass = TObjString("cutPass")
-                cutStrObjFail = TObjString("cutFail")
-                cutStrObjPass.SetString("(%s) && (%s) &&  (%s)" % (precut, cutBin, cutID))
-                cutStrObjFail.SetString("(%s) && (%s) && !(%s)" % (precut, cutBin, cutID))
-                cutStrObjPass.Write()
-                cutStrObjFail.Write()
+                for b in range(len(bins)-1):
+                    minX, maxX = bins[b], bins[b+1]
+                    cutBin = "%s >= %f && %s < %f" % ((expr%leg), minX, (expr%leg), maxX)
+                    cutPass = "(%s) && (%s) &&  (%s)" % (precut, cutBin, cutID)
+                    cutFail = "(%s) && (%s) && !(%s)" % (precut, cutBin, cutID)
 
-                hPass = TH1D("hPass", "Passing;Mass (GeV);Candidates per %f MeV" % binW, nbins, minMass, maxMass)
-                hFail = TH1D("hFail", "Failing;Mass (GeV);Candidates per %f MeV" % binW, nbins, minMass, maxMass)
-                tree.Draw("vtx_mass>>hPass", cutStrObjPass.GetString().Data(), "goff")
-                tree.Draw("vtx_mass>>hFail", cutStrObjFail.GetString().Data(), "goff")
-                hPass.Write()
-                hFail.Write()
+                    binDir = varDir.mkdir("bin%d" % (b+1))
+                    binDir.cd()
 
-    haetabins = TH1D("haetabins", "aetabins;|#eta|", len(aetabins)-1, array('d', aetabins))
-    hptbins.SetDirectory(modedir)
-    for aetabin in range(len(aetabins)-1):
-        minAeta, maxAeta = aetabins[aetabin], aetabins[aetabin+1]
-        for leg in range(2):
-            print "@@@@ Building event list", os.path.basename(fName), "aetabin", aetabin, "...",
-            cutBin = "fabs(trk_eta[%d]) >= %f && fabs(trk_eta[%d]) < %f" % (leg, minAeta, leg, maxAeta)
-            print "done"
-
-            for idName in idSet:
-                cutID = "mu_dR[%d]<0.01 && mu_%s[%d]" % (leg, idSet[idName], leg)
-
-                outdir = makedirs(fout, "%s/%s/leg%d_aetabin%d" % (mode, idName, leg+1, aetabin))
-                outdir.cd()
-
-                cutStrObjPass = TObjString("cutPass")
-                cutStrObjFail = TObjString("cutFail")
-                cutStrObjPass.SetString("(%s) && (%s) &&  (%s)" % (precut, cutBin, cutID))
-                cutStrObjFail.SetString("(%s) && (%s) && !(%s)" % (precut, cutBin, cutID))
-                cutStrObjPass.Write()
-                cutStrObjFail.Write()
-
-                hPass = TH1D("hPass", "Passing;Mass (GeV);Candidates per %f MeV" % binW, nbins, minMass, maxMass)
-                hFail = TH1D("hFail", "Failing;Mass (GeV);Candidates per %f MeV" % binW, nbins, minMass, maxMass)
-                tree.Draw("vtx_mass>>hPass", cutStrObjPass.GetString().Data(), "goff")
-                tree.Draw("vtx_mass>>hFail", cutStrObjFail.GetString().Data(), "goff")
-                hPass.Write()
-                hFail.Write()
+                    hPass = TH1D("hPass", "Passing=%s;%s" % (cutPass, xyTitles), nbins, minMass, maxMass)
+                    hFail = TH1D("hFail", "Failing=%s;%s" % (cutFail, xyTitles), nbins, minMass, maxMass)
+                    #tree.Draw("vtx_mass>>hPass", cutPass, "goff")
+                    #tree.Draw("vtx_mass>>hFail", cutFail, "goff")
+                    hPass.Write()
+                    hFail.Write()
 
     fout.Write()
     print "@@ Finished", fName
