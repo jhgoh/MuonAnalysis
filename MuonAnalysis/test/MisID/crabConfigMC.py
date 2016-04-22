@@ -8,7 +8,7 @@ config.General.workArea = "MuonMisID/TT_powheg"
 
 config.section_("JobType")
 config.JobType.pluginName  = 'Analysis'
-config.JobType.psetName    = 'prod_misID_MC_cfg.py'
+config.JobType.psetName    = 'prod_MC_cfg.py'
 
 config.section_("Data")
 config.Data.publication  = False
