@@ -76,8 +76,8 @@ def project(dirName, mode, fName):
 
                     hPass = TH1D("hPass", "Passing=%s;%s" % (cutPass, xyTitles), nbins, minMass, maxMass)
                     hFail = TH1D("hFail", "Failing=%s;%s" % (cutFail, xyTitles), nbins, minMass, maxMass)
-                    #tree.Draw("vtx_mass>>hPass", cutPass, "goff")
-                    #tree.Draw("vtx_mass>>hFail", cutFail, "goff")
+                    tree.Draw("vtx_mass>>hPass", cutPass, "goff")
+                    tree.Draw("vtx_mass>>hFail", cutFail, "goff")
                     hPass.Write()
                     hFail.Write()
 
