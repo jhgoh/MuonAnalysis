@@ -88,6 +88,7 @@ def fit(hA, hB, canvas = None, outdir = None):
     profMinuit.setStrategy(2)
     profMinuit.setPrintLevel(1)
     profMinuit.migrad()
+    profMinuit.migrad()
     profMinuit.minos(RooArgSet(ws.var("ratio")))
     result = profMinuit.save()
 
