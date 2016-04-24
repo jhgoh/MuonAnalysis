@@ -12,7 +12,7 @@ modeSet = {
         "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 50, 200]},
         "abseta":{'expr':'fabs(trk_eta[%d])','title':'|#eta|','bins':[0, 0.9, 1.2, 1.6, 2.4]},
     }},
-    "lamb":{"massbin":(100,1.08,1.22), "vars":{
+    "lamb":{"massbin":(100,1.10,1.14), "vars":{
         "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 50, 200]},
         "abseta":{'expr':'fabs(trk_eta[%d])','title':'|#eta|','bins':[0, 0.9, 1.2, 1.6, 2.4]},
     }},

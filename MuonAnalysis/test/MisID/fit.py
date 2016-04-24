@@ -19,36 +19,32 @@ def fit(hA, hB, canvas = None, outdir = None):
 
     massMin = hA.GetXaxis().GetXmin()
     massMax = hB.GetXaxis().GetXmax()
+    massNbin = hA.GetNbinsX()
 
     ws = RooWorkspace("ws")
-
     mass = RooRealVar("mass", "mass", massMin, massMax, "GeV/c^{2}")
     mass.setBinning(RooBinning(hA.GetNbinsX(), massMin, massMax))
-    hDataA = RooDataHist("hDataA", "mass", RooArgList(mass), hA)
-    hDataB = RooDataHist("hDataB", "mass", RooArgList(mass), hB)
-
     getattr(ws, 'import')(mass, RooCmdArg())
-    getattr(ws, 'import')(hDataA, RooCmdArg())
-    getattr(ws, 'import')(hDataB, RooCmdArg())
 
     if "ks" in mode:
         ws.factory("m0[%f,%f,%f]" % ((massMax+massMin)/2, massMin, massMax))
-        ws.factory("Voigtian::sigA(mass, m0, w0[1e-2, 5e-3, 2e-2], sigmaA[1e-2, 1e-3, 1e-1])")
+        ws.factory("Voigtian::sigA(mass, m0, w0[1e-2, 5e-3, 2e-2], sigmaA[5e-3, 1e-3, 1e-2])")
         ws.factory("Voigtian::sigB(mass, m0, w0, sigmaA)")
         ws.factory("Chebychev::bkgA(mass, {p0A[0, -5, 5], p1A[0, -5, 5]})")
         ws.factory("Chebychev::bkgB(mass, {p0B[0, -5, 5], p1B[0, -5, 5]})")
     elif "phi" in mode:
-        ws.factory("m0[%f,%f,%f]" % ((massMax+massMin)/2, massMin, massMax))
-        ws.factory("Voigtian::sigA(mass, m0, sigmaA[2e-3, 1e-3, 5e-3])")
-        ws.factory("Voigtian::sigB(mass, m0, sigmaA)")
-        ws.factory("Chebychev::bkgA(mass, {p0A[0, -5, 5], p1A[0, -5, 5]})")
-        ws.factory("Chebychev::bkgB(mass, {p0B[0, -5, 5], p1B[0, -5, 5]})")
-    elif "lamb" in mode:
-        ws.factory("m0[1.15,1.1,1.12]")
-        ws.factory("Gaussian::sigA(mass, m0, sigmaA[5e-4, 1e-4, 2e-3])")
+        ws.factory("m0[1.02,1.015,1.025]")
+        ws.factory("Gaussian::sigA(mass, m0, sigmaA[2e-3, 1e-3, 5e-3])")
         ws.factory("Gaussian::sigB(mass, m0, sigmaA)")
         ws.factory("Chebychev::bkgA(mass, {p0A[0, -5, 5], p1A[0, -5, 5], p2A[0, -5, 5]})")
         ws.factory("Chebychev::bkgB(mass, {p0B[0, -5, 5], p1B[0, -5, 5], p2B[0, -5, 5]})")
+    elif "lamb" in mode:
+        ws.factory("m0[1.15,1.1,1.12]")
+        ws.factory("Voigtian::sigA(mass, m0, w0[1e-3, 1e-4, 5e-3], sigmaA[1e-3, 5e-4, 2e-3])")
+        ws.factory("Voigtian::sigB(mass, m0, w0, sigmaA)")
+        ws.factory("Chebychev::bkgA(mass, {p0A[0, -5, 5], p1A[0, -5, 5]})")
+        ws.factory("Chebychev::bkgB(mass, {p0B[0, -5, 5], p1B[0, -5, 5]})")
+
     ws.factory("ratio[0.003, 0, 1]")
     ws.factory("EXPR::nSigA('nSig*ratio', nSig[%f,0,%f], ratio)" % (0.5*nTotal, 1.1*nTotal))
     ws.factory("EXPR::nSigB('nSig*(1-ratio)', nSig, ratio)")
@@ -66,6 +62,10 @@ def fit(hA, hB, canvas = None, outdir = None):
     simPdf.addPdf(ws.pdfA, "A")
     simPdf.addPdf(ws.pdfB, "B")
 
+    hDataA = RooDataHist("hDataA", "mass", RooArgList(mass), hA)
+    hDataB = RooDataHist("hDataB", "mass", RooArgList(mass), hB)
+    #getattr(ws, 'import')(hDataA, RooCmdArg())
+    #getattr(ws, 'import')(hDataB, RooCmdArg())
     dataA = RooDataSet("dataA", "mass", RooArgSet(mass, weight), RooFit.WeightVar("weight"))
     dataB = RooDataSet("dataB", "mass", RooArgSet(mass, weight), RooFit.WeightVar("weight"))
     for i in range(hDataA.numEntries()):
@@ -79,7 +79,7 @@ def fit(hA, hB, canvas = None, outdir = None):
     simNLL = simPdf.createNLL(dataSim, RooFit.Extended(True))
     scanner = RooMinimizer(simNLL)
 
-    nll = RooProfileLL("simPdfNLL", "", simNLL, RooArgSet(ws.var("ratio")))
+    nll = simNLL.createProfile(RooArgSet(ws.var("ratio")))
     scanner.minimize("Minuit2", "scan")
 
     nll.getVal()
@@ -110,30 +110,30 @@ def fit(hA, hB, canvas = None, outdir = None):
         simPdf.plotOn(frameB, s, proj, RooFit.LineColor(kRed), RooFit.Components("bkgB"), RooFit.LineStyle(kDashed))
 
         print "@@@ Plotting NLL @@@"
-        canvas.Divide(2,2)
+        canvas.Divide(2,1)
         canvas.cd(1)
         frameA.Draw()
         canvas.cd(2)
         frameB.Draw()
-        canvas.cd(3)
-        frameNLL = ws.var("ratio").frame(RooFit.Range(0, 2e-2))
-        nll.plotOn(frameNLL, RooFit.Range(0,2e-2))
-        frameNLL.Draw()
+        #canvas.cd(3)
+        #frameNLL = ws.var("ratio").frame(RooFit.Range(0, 2e-2))
+        #nll.plotOn(frameNLL, RooFit.Range(0,2e-2))
+        #frameNLL.Draw()
 
-        print "@@@ Printing fit results @@@"
-        canvas.cd(4)
-        l = TPaveText(0,0,1,1)
-        l.SetTextAlign(11)
-        l.SetFillStyle(0)
-        l.AddText("Fit results")
-        pars = result.floatParsFinal()
-        for i in xrange(pars.getSize()):
-            par = pars[i]
-            if par.hasAsymError():
-                l.AddText(" %s = %f + %f - %f" % (par.GetName(), par.getVal(), par.getErrorHi(), par.getErrorLo()))
-            else:
-                l.AddText(" %s = %f +- %f" % (par.GetName(), par.getVal(), par.getError()))
-        l.Draw()
+        #print "@@@ Printing fit results @@@"
+        #canvas.cd(4)
+        #l = TPaveText(0,0,1,1)
+        #l.SetTextAlign(11)
+        #l.SetFillStyle(0)
+        #l.AddText("Fit results")
+        #pars = result.floatParsFinal()
+        #for i in xrange(pars.getSize()):
+        #    par = pars[i]
+        #    if par.hasAsymError():
+        #        l.AddText(" %s = %f + %f - %f" % (par.GetName(), par.getVal(), par.getErrorHi(), par.getErrorLo()))
+        #    else:
+        #        l.AddText(" %s = %f +- %f" % (par.GetName(), par.getVal(), par.getError()))
+        #l.Draw()
 
         if outdir != None:
             outdir.cd()
@@ -154,7 +154,6 @@ if __name__ == '__main__':
 
     modeDir = fIn.GetDirectory(mode)
     if modeDir == None: os.exit(1)
-    modeDirOut = fOut.mkdir(mode)
 
     for idName in set([x.GetName()[:-5] for x in modeDir.GetListOfKeys()]):
         idDir1 = modeDir.GetDirectory("%s_leg1" % idName)
@@ -199,7 +198,7 @@ if __name__ == '__main__':
 
                 if mode == 'lamb':
                     varDirOut1.cd()
-                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
+                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 250)
                     res = fit(hA1, hB1, c, varDirOut1)
                     c.Write()
 
@@ -212,7 +211,7 @@ if __name__ == '__main__':
 
                 elif mode == 'ks':
                     varDirOut1.cd()
-                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
+                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 250)
                     hA1.Add(hA2)
                     hB1.Add(hB2)
                     res = fit(hA1, hB1, c, varDirOut1)
@@ -227,7 +226,7 @@ if __name__ == '__main__':
 
                 elif mode == 'phi':
                     varDirOut1.cd()
-                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
+                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 250)
                     res = fit(hA1, hB1, c, varDirOut1)
                     c.Write()
 
@@ -239,7 +238,7 @@ if __name__ == '__main__':
                     gRatio1.SetPointError(b, ex, ex, abs(eyLo), eyHi)
 
                     varDirOut2.cd()
-                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
+                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 250)
                     res = fit(hA2, hB2, c, varDirOut2)
                     c.Write()
 

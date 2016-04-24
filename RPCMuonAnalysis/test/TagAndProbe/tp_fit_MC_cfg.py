@@ -26,5 +26,5 @@ if len(sys.argv) > 2:
     process.tnp.OutputFileName = "tp_fit_DYJets_MG_%s.root" % wp
 
 for i in range(1, 25):
-    if i in (15, 18): continue
+    #if i in (15, 18): continue
     process.tnp.InputFileNames.append('root://eoscms//eos/cms/store/user/jhgoh/RPCMuonEff/20150415_1/DYJets_MG/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/crab_20160415_143449/160415_123541/0000/tnp_%d.root' %i)
