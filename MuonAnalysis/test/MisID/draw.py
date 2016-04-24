@@ -1,5 +1,22 @@
 #!/usr/bin/env python
 
+modeDef = {
+    "proton":("lamb", "Proton"),
+    "pion":("ks", "Pion"),
+    "Kp":("phi", "K^{+}"),
+    "Km":("phi", "K^{-}"),
+}
+
+import sys, os
+if len(sys.argv) < 3 or \
+    sys.argv[1] not in ("MC", "RD") or \
+    sys.argv[2] not in modeDef:
+    print "python draw.py [RD,MC] [proton,pion,Kp,Km]"
+    os.exit(1)
+
+dataType = sys.argv[1]
+submod = sys.argv[2]
+
 from ROOT import *
 from SKKU.CommonTools.tdrStyle import *
 tdrStyle.SetTitleSize(0.055, "XYZ")
@@ -7,11 +24,8 @@ tdrStyle.SetPadTopMargin(0.1)
 tdrStyle.SetTitleXOffset(1.15)
 tdrStyle.SetTitleYOffset(1.15)
 
-#mode, submod, xtitle = "lamb", "proton", "Proton"
-mode, submod, xtitle = "ks", "pion", "Pion"
-#mode, submod, xtitle = "phi", "Kp", "K^{+}"
-#mode, submod, xtitle = "phi", "Km", "K^{-}"
-dataType = "RD"
+mode, xtitle = modeDef[submod]
+
 varNames = {
     "pt":("%s transverse momentum p_{T} (GeV)" % xtitle),
     "abseta":("%s pseudorapidity |#eta|" % xtitle)
@@ -82,7 +96,7 @@ for varName in frames:
     label.SetTextSize(16)
     label.SetTextAlign(11)
     label.SetMargin(0)
-    label.AddText("CMS work in progress #sqrt{s} = 13 TeV, L=1.XY fb^{-1})")
+    label.AddText("CMS 2015 work in progress #sqrt{s} = 13 TeV, L=2.XY fb^{-1}")
     label.Draw()
 
     c.Print("c_%s_%s_%s.png" % (submod, varName, dataType))
