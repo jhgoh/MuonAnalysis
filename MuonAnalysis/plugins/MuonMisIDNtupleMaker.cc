@@ -813,8 +813,12 @@ std::vector<int> MuonMisIDNtupleMaker::matchByDR(const T1& etas, const T1& phis,
   for ( int i=0; i<n; ++i ) {
     const auto eta = etas[i], phi = phis[i];
     for ( int j=0; j<m; ++j ) {
-      const auto trk = coll.at(j).innerTrack();
-      if ( trk.isNull() ) continue;
+      const auto innerTrack = coll.at(j).innerTrack();
+      const auto bestTrack = coll.at(j).bestTrackRef();
+      const reco::TrackBase* trk = nullptr;
+      if ( innerTrack.isNonnull() ) trk = innerTrack.get();
+      else if ( bestTrack.isNonnull() ) trk = bestTrack.get(); // Retry with best track if inner track is invalid
+      else continue; // This should not happen, but just for safety...
 
       const double trkPhi = trk->phi();
       const double trkEta = trk->eta();
