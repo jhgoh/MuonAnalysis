@@ -5,20 +5,20 @@ from array import array
 
 modeSet = {
     "ks":{"massbin":(100,0.45, 0.55), "vars":{
-        "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 50, 200]},
+        "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 200]},
         "abseta":{'expr':'fabs(trk_eta[%d])','title':'|#eta|','bins':[0, 0.9, 1.2, 1.6, 2.4]},
     }},
     "phi":{"massbin":(100,0.99,1.06), "vars":{
-        "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 50, 200]},
+        "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 200]},
         "abseta":{'expr':'fabs(trk_eta[%d])','title':'|#eta|','bins':[0, 0.9, 1.2, 1.6, 2.4]},
     }},
     "lamb":{"massbin":(100,1.10,1.14), "vars":{
-        "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 50, 200]},
+        "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 200]},
         "abseta":{'expr':'fabs(trk_eta[%d])','title':'|#eta|','bins':[0, 0.9, 1.2, 1.6, 2.4]},
     }},
 }
 
-precut = "1"
+precut = "vtx_lxy < 4.0"
 idSet = {
     "Tight":"isTight", "Medium":"isMedium", "Loose":"isLoose",
     "Soft":"isSoft", "HighPt":"isHighPt",
@@ -68,6 +68,7 @@ def project(dirName, mode, fName):
                 for b in range(len(bins)-1):
                     minX, maxX = bins[b], bins[b+1]
                     cutBin = "%s >= %f && %s < %f" % ((expr%leg), minX, (expr%leg), maxX)
+                    if idName == "RPC": cutBin += " && fabs(trk_eta[%d]) < 1.6" % leg
                     cutPass = "(%s) && (%s) &&  (%s)" % (precut, cutBin, cutID)
                     cutFail = "(%s) && (%s) && !(%s)" % (precut, cutBin, cutID)
 
