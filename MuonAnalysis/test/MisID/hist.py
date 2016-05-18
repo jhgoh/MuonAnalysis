@@ -4,15 +4,15 @@ from ROOT import *
 from array import array
 
 modeSet = {
-    "ks":{"massbin":(100,0.45, 0.55), "vars":{
+    "ks":{"massbin":(50,0.45, 0.55), "vars":{
         "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 200]},
         "abseta":{'expr':'fabs(trk_eta[%d])','title':'|#eta|','bins':[0, 0.9, 1.2, 1.6, 2.4]},
     }},
-    "phi":{"massbin":(100,0.99,1.06), "vars":{
+    "phi":{"massbin":(50,1.00,1.04), "vars":{
         "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 200]},
         "abseta":{'expr':'fabs(trk_eta[%d])','title':'|#eta|','bins':[0, 0.9, 1.2, 1.6, 2.4]},
     }},
-    "lamb":{"massbin":(100,1.10,1.14), "vars":{
+    "lamb":{"massbin":(50,1.10,1.13), "vars":{
         "pt":{'expr':"trk_pt[%d]",'title':"p_{T} (GeV)",'bins':[4, 5, 6, 8, 10, 15, 20, 30, 200]},
         "abseta":{'expr':'fabs(trk_eta[%d])','title':'|#eta|','bins':[0, 0.9, 1.2, 1.6, 2.4]},
     }},
