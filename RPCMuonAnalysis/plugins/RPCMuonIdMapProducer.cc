@@ -64,52 +64,59 @@ void RPCMuonIdMapProducer::produce(edm::Event& event, const edm::EventSetup& eve
 
   for ( int i=0, n=muHandle->size(); i<n; ++i ) {
     edm::Ref<MuonColl> muRef(muHandle, i);
+    const double aeta = std::abs(muRef->eta());
 
     // Collect matching information
-    std::map<int, int> matchedLoose, matchedTight;
+    std::set<int> matchedStLoose, matchedStTight;
+    int nLayerLoose = 0, nLayerTight = 0;
+    int nLayerFirstStLoose = 0, nLayerFirstStTight = 0;
+    int nLayerLastStLoose = 0, nLayerLastStTight = 0;
 
     const auto& muMatches = muRef->matches();
     for ( const auto& muMatch : muMatches ) {
       if ( muMatch.detector() != 3 ) continue;
       if ( muMatch.rpcMatches.empty() ) continue;
 
-      const int st = muMatch.station();
+      const RPCDetId rpcDet(muMatch.id);
+      const int region = rpcDet.region();
+      const int st = rpcDet.station();
+      const int ring = rpcDet.ring();
+      const bool isFirstStation = (st > 1) ? false : ( (region != 0 and ring == 3) ? false : true );
+      const bool isLastStation  = [&](){
+        if ( st == 4 ) return true;
+        if ( region != 0 and ring == 3 ) {
+          if ( st == 1 and aeta >= 0.9  and aeta < 1.0  ) return true; // RE1/3
+          if ( st == 2 and aeta >= 1.0  and aeta < 1.15 ) return true; // RE2/3
+          if ( st == 3 and aeta >= 1.15 and aeta < 1.2  ) return true; // RE3/3
+        }
+        return false;
+      }();
 
       const double dx = muMatch.dist();
       const double dxErr = muMatch.distErr();
       if ( dx < 20 or dx < 4*dxErr ) {
-        if ( matchedLoose.count(st) == 0 ) matchedLoose[st] = 0;
-        ++matchedLoose[st];
+        matchedStLoose.insert(st);
+        ++nLayerLoose;
+        if ( isFirstStation ) ++nLayerFirstStLoose;
+        if ( isLastStation ) ++nLayerLastStLoose;
       }
       if ( dx < 3 and dx < 4*dxErr ) {
-        if ( matchedTight.count(st) == 0 ) matchedTight[st] = 0;
-        ++ matchedTight[st];
+        matchedStTight.insert(st);
+        ++nLayerTight;
+        if ( isFirstStation ) ++nLayerFirstStTight;
+        if ( isLastStation ) ++nLayerLastStTight;
       }
     }
 
     // Calculate RPC ID based on the matching information
-    auto addSecond = [](int b, const std::pair<int, int>& a) { return b+a.second; };
-    const int nLayerLoose = std::accumulate(matchedLoose.begin(), matchedLoose.end(), 0, addSecond);
-    const int nLayerTight = std::accumulate(matchedTight.begin(), matchedTight.end(), 0, addSecond);
-
-    int nLayerLooseSSt = nLayerLoose;
-    int nLayerTightSSt = nLayerTight;
-
-    const int minSt = RPCDetId::minStationId;
-    if ( matchedLoose.count( minSt) != 0 ) nLayerLooseSSt -= matchedLoose[ minSt];
-    if ( matchedLoose.count(-minSt) != 0 ) nLayerLooseSSt -= matchedLoose[-minSt]; // neg. station number for RE-? safe even if staion # is positive definite
-    if ( matchedTight.count( minSt) != 0 ) nLayerTightSSt -= matchedTight[ minSt];
-    if ( matchedTight.count(-minSt) != 0 ) nLayerTightSSt -= matchedTight[-minSt]; // neg. station number for RE-? safe even if staion # is positive definite
-
     idMaps["Loose"].push_back(nLayerLoose>=2);
     idMaps["Tight"].push_back(nLayerTight>=2);
-    idMaps["TwoStationLoose"].push_back(matchedLoose.size()>=2);
-    idMaps["TwoStationTight"].push_back(matchedTight.size()>=2);
-    const int maxSt = RPCDetId::maxStationId;
-    idMaps["LastStationLoose"].push_back(matchedLoose.count(maxSt) != 0);
-    idMaps["LastStationTight"].push_back(matchedTight.count(maxSt) != 0);
-    idMaps["SecondStationLoose"].push_back(nLayerLooseSSt>=2);
-    idMaps["SecondStationTight"].push_back(nLayerTightSSt>=2);
+    idMaps["TwoStationLoose"].push_back(matchedStLoose.size()>=2);
+    idMaps["TwoStationTight"].push_back(matchedStTight.size()>=2);
+    idMaps["LastStationLoose"].push_back(nLayerLastStLoose>0);
+    idMaps["LastStationTight"].push_back(nLayerLastStTight>0);
+    idMaps["SecondStationLoose"].push_back(nLayerLoose>=2 and (nLayerLoose-nLayerFirstStLoose)>0);
+    idMaps["SecondStationTight"].push_back(nLayerTight>=2 and (nLayerTight-nLayerFirstStTight)>0);
   
   }
   
