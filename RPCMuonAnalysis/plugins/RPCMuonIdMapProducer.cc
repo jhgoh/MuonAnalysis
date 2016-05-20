@@ -84,10 +84,13 @@ void RPCMuonIdMapProducer::produce(edm::Event& event, const edm::EventSetup& eve
       const bool isFirstStation = (st > 1) ? false : ( (region != 0 and ring == 3) ? false : true );
       const bool isLastStation  = [&](){
         if ( st == 4 ) return true;
-        if ( region != 0 and ring == 3 ) {
-          if ( st == 1 and aeta >= 0.9  and aeta < 1.0  ) return true; // RE1/3
-          if ( st == 2 and aeta >= 1.0  and aeta < 1.15 ) return true; // RE2/3
-          if ( st == 3 and aeta >= 1.15 and aeta < 1.2  ) return true; // RE3/3
+        if ( region == 1 ) {
+          if ( std::abs(ring) == 2 and st == 3 and aeta >= 0.8 and aeta <= 0.9 ) return true; // RB3 wheel += 2
+        }
+        else if ( ring == 3 ) {
+          if ( st == 1 and aeta >= 0.9 and aeta <= 1.0  ) return true; // RE1/3
+          if ( st == 2 and aeta >= 1.0 and aeta <= 1.15 ) return true; // RE2/3
+          if ( st == 3 and aeta >= 1.1 and aeta <= 1.2  ) return true; // RE3/3
         }
         return false;
       }();
