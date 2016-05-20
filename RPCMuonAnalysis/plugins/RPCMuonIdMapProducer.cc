@@ -27,14 +27,17 @@ public:
   void produce(edm::Event& event, const edm::EventSetup& eventSetup) override;
 
 private:
-  typedef std::vector<pat::Muon> MuonColl;
-  edm::EDGetTokenT<MuonColl> muToken_;
+  typedef std::vector<pat::Muon> PatMuonColl;
+  typedef std::vector<reco::Muon> RecoMuonColl;
+  edm::EDGetTokenT<PatMuonColl> patMuonToken_;
+  edm::EDGetTokenT<RecoMuonColl> recoMuonToken_;
 
   typedef std::vector<float> vfloat;
 };
 
 RPCMuonIdMapProducer::RPCMuonIdMapProducer(const edm::ParameterSet& pset):
-  muToken_(consumes<MuonColl>(pset.getParameter<edm::InputTag>("src")))
+  patMuonToken_(consumes<PatMuonColl>(pset.getParameter<edm::InputTag>("src"))),
+  recoMuonToken_(consumes<RecoMuonColl>(pset.getParameter<edm::InputTag>("src")))
 {
   produces<edm::ValueMap<float> >("Loose");
   produces<edm::ValueMap<float> >("Tight");
@@ -48,8 +51,12 @@ RPCMuonIdMapProducer::RPCMuonIdMapProducer(const edm::ParameterSet& pset):
 
 void RPCMuonIdMapProducer::produce(edm::Event& event, const edm::EventSetup& eventSetup)
 {
-  edm::Handle<MuonColl> muHandle;
-  event.getByToken(muToken_, muHandle);
+  edm::Handle<PatMuonColl> patMuonHandle;
+  edm::Handle<RecoMuonColl> recoMuonHandle;
+
+  const bool isPatMuon = event.getByToken(patMuonToken_, patMuonHandle);
+  //const bool isRecoMuon = isPatMuon ? false : event.getByToken(recoMuonToken_, recoMuonHandle);
+  if ( !isPatMuon ) event.getByToken(recoMuonToken_, recoMuonHandle);
 
   std::map<std::string, vfloat> idMaps = {
     {"Loose", vfloat()},
@@ -62,9 +69,10 @@ void RPCMuonIdMapProducer::produce(edm::Event& event, const edm::EventSetup& eve
     {"SecondStationTight", vfloat()},
   };
 
-  for ( int i=0, n=muHandle->size(); i<n; ++i ) {
-    edm::Ref<MuonColl> muRef(muHandle, i);
-    const double aeta = std::abs(muRef->eta());
+  const int nMuon = isPatMuon ? patMuonHandle->size() : recoMuonHandle->size();
+  for ( int i=0; i<nMuon; ++i ) {
+    const reco::Muon* mu = isPatMuon ? &(patMuonHandle->at(i)) : &(recoMuonHandle->at(i));
+    const double aeta = std::abs(mu->eta());
 
     // Collect matching information
     std::set<int> matchedStLoose, matchedStTight;
@@ -72,7 +80,7 @@ void RPCMuonIdMapProducer::produce(edm::Event& event, const edm::EventSetup& eve
     int nLayerFirstStLoose = 0, nLayerFirstStTight = 0;
     int nLayerLastStLoose = 0, nLayerLastStTight = 0;
 
-    const auto& muMatches = muRef->matches();
+    const auto& muMatches = mu->matches();
     for ( const auto& muMatch : muMatches ) {
       if ( muMatch.detector() != 3 ) continue;
       if ( muMatch.rpcMatches.empty() ) continue;
@@ -130,7 +138,8 @@ void RPCMuonIdMapProducer::produce(edm::Event& event, const edm::EventSetup& eve
 
     out.reset(new edm::ValueMap<float>());
     edm::ValueMap<float>::Filler filler(*out);
-    filler.insert(muHandle, idValues.begin(), idValues.end());
+    if ( isPatMuon ) filler.insert(patMuonHandle, idValues.begin(), idValues.end());
+    else filler.insert(recoMuonHandle, idValues.begin(), idValues.end());
     filler.fill();
     event.put(out, name);
   }
