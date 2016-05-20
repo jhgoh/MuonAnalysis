@@ -26,6 +26,4 @@ if len(sys.argv) > 2:
     process.tnp.OutputFileName = "tp_fit_SingleMuon_Run2015D_%s.root" % wp
 
 for i in range(1, 162):
-    if i in (2,3,4,19,20,30,46,49,60,67,69,78,81,93): continue
-    if i in (101,103,106,109,115,121,130, 137, 138, 146, 148, 152, 154): continue
     process.tnp.InputFileNames.append('root://eoscms//eos/cms/store/user/jhgoh/RPCMuonEff/20150415_1/SingleMuon_2015D/SingleMuon/crab_20160415_143600/160415_123642/0000/tnp_%d.root' % i)
