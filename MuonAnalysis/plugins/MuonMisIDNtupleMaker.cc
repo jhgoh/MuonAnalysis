@@ -50,6 +50,10 @@ struct SVFitResult
 };
 
 typedef math::XYZTLorentzVector LV;
+typedef std::vector<int> vint;
+typedef std::vector<float> vfloat;
+typedef std::vector<bool> vbool;
+typedef edm::ValueMap<float> VMapF;
 
 class MuonMisIDNtupleMaker : public edm::one::EDAnalyzer<edm::one::SharedResources>
 {
@@ -66,9 +70,10 @@ private:
                     const reco::TransientTrack& transTrack1,
                     const reco::TransientTrack& transTrack2,
                     const reco::TransientTrack& transTrack3) const;
-  void fillMuonId(const reco::Muon& mu, const reco::Vertex& vertex, std::vector<bool>* results[], int idx) const;
+  void fillMuonId(reco::MuonRef muRef, const reco::Vertex& vertex, vbool* results[],
+                  std::vector<edm::Handle<VMapF> >& vMapHandles, std::vector<vbool*>& results2, int idx) const;
   template <typename T1, typename T2>
-  std::vector<int> matchByDR(const T1& etas, const T1& phis, T2& coll) const;
+  vint matchByDR(const T1& etas, const T1& phis, T2& coll) const;
 
   edm::EDGetTokenT<reco::GenParticleCollection> genParticleToken_;
   edm::EDGetTokenT<reco::VertexCollection> vertexToken_;
@@ -76,6 +81,8 @@ private:
   edm::EDGetTokenT<pat::PackedCandidateCollection> pfCandToken_;
   edm::EDGetTokenT<reco::MuonCollection> muonToken_;
   edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
+
+  std::vector<edm::EDGetTokenT<VMapF> > vMapTokens_;
 
   // Constants for the vertex fit
   const double muonMass = 0.1057;
@@ -99,10 +106,6 @@ private:
   int pdgId1_, pdgId2_, pdgId3_;
 
   // Trees and histograms
-  typedef std::vector<int> vint;
-  typedef std::vector<float> vfloat;
-  typedef std::vector<bool> vbool;
-
   TTree* tree_;
   unsigned char b_run, b_lumi;
   unsigned long long int b_event;
@@ -118,6 +121,7 @@ private:
   vint* b_mu_q;
   static const int nId_ = 26;
   vbool* b_mu_id[nId_];
+  std::vector<vbool*> b_mu_vids_;
 
   float b_gen_dR;
 
@@ -256,7 +260,7 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   tree_->Branch("mu_dR", "std::vector<float>", &b_mu_dR);
   tree_->Branch("mu_pt", "std::vector<float>", &b_mu_pt);
 
-  for ( int i=0; i<nId_; ++i ) b_mu_id[i] = new std::vector<bool>();
+  for ( int i=0; i<nId_; ++i ) b_mu_id[i] = new vbool();
 
   int nId = 0;
   tree_->Branch("mu_isTight" , "std::vector<bool>", &b_mu_id[nId++]);
@@ -287,9 +291,16 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   tree_->Branch("mu_isTMOneAngLoose", "std::vector<bool>", &b_mu_id[nId++]);
   tree_->Branch("mu_isTMOneAngTight", "std::vector<bool>", &b_mu_id[nId++]);
 
-  tree_->Branch("mu_isRPCMedium", "std::vector<bool>", &b_mu_id[nId++]);
+  tree_->Branch("mu_isRPCMuLoose", "std::vector<bool>", &b_mu_id[nId++]);
 
   assert(nId == nId_);
+
+  for ( auto idMapSet : pset.getParameter<std::vector<edm::ParameterSet> >("idMaps") ) {
+    const auto name = idMapSet.getUntrackedParameter<std::string>("name");
+    vMapTokens_.push_back(consumes<VMapF>(idMapSet.getParameter<edm::InputTag>("src")));
+    b_mu_vids_.push_back(new vbool());
+    tree_->Branch(("mu_"+name).c_str(), "std::vector<bool>", b_mu_vids_.back());
+  }
 
   tree_->Branch("gen_dR", &b_gen_dR, "gen_dR/F");
 
@@ -331,6 +342,13 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
 
   edm::Handle<reco::MuonCollection> muonHandle;
   event.getByToken(muonToken_, muonHandle);
+
+  std::vector<edm::Handle<VMapF> > vMapHandles;
+  for ( auto& token : vMapTokens_ ) {
+    edm::Handle<VMapF> handle;
+    event.getByToken(token, handle);
+    vMapHandles.push_back(handle);
+  }
 
   b_nGen = 0;
   //std::vector<reco::GenParticle> genMuHads;
@@ -492,33 +510,35 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       *b_mu_dR = vfloat({-1, -1});
       *b_mu_pt = vfloat({0, 0});
       for ( int i=0; i<nId_; ++i ) *b_mu_id[i] = vbool({false, false});
+      for ( int i=0, n=vMapHandles.size(); i<n; ++i ) *b_mu_vids_[i] = vbool({false, false});
     }
     else {
       *b_mu_q = vint({0, 0, 0});
       *b_mu_dR = vfloat({-1, -1, -1});
       *b_mu_pt = vfloat({0, 0, 0});
       for ( int i=0; i<nId_; ++i ) *b_mu_id[i] = vbool({false, false, false});
+      for ( int i=0, n=vMapHandles.size(); i<n; ++i ) *b_mu_vids_[i] = vbool({false, false, false});
     }
     if ( muMatch[0] >= 0 ) {
-      const auto& mu = muonHandle->at(muMatch[0]);
-      b_mu_q->at(0) = mu.charge();
-      b_mu_pt->at(0) = mu.pt();
-      b_mu_dR->at(0) = deltaR(mu.p4(), sv.leg1);
-      fillMuonId(mu, pv, b_mu_id, 0);
+      reco::MuonRef muRef(muonHandle, muMatch[0]);
+      b_mu_q->at(0) = muRef->charge();
+      b_mu_pt->at(0) = muRef->pt();
+      b_mu_dR->at(0) = deltaR(muRef->p4(), sv.leg1);
+      fillMuonId(muRef, pv, b_mu_id, vMapHandles, b_mu_vids_, 0);
     }
     if ( muMatch[1] >= 0 ) {
-      const auto& mu = muonHandle->at(muMatch[1]);
-      b_mu_q->at(1) = mu.charge();
-      b_mu_pt->at(1) = mu.pt();
-      b_mu_dR->at(1) = deltaR(mu.p4(), sv.leg1);
-      fillMuonId(mu, pv, b_mu_id, 1);
+      reco::MuonRef muRef(muonHandle, muMatch[1]);
+      b_mu_q->at(1) = muRef->charge();
+      b_mu_pt->at(1) = muRef->pt();
+      b_mu_dR->at(1) = deltaR(muRef->p4(), sv.leg1);
+      fillMuonId(muRef, pv, b_mu_id, vMapHandles, b_mu_vids_, 1);
     }
     if ( pdgId3_ != 0 and muMatch[2] >= 0 ) {
-      const auto& mu = muonHandle->at(muMatch[2]);
-      b_mu_q->at(2) = mu.charge();
-      b_mu_pt->at(2) = mu.pt();
-      b_mu_dR->at(2) = deltaR(mu.p4(), sv.leg1);
-      fillMuonId(mu, pv, b_mu_id, 2);
+      reco::MuonRef muRef(muonHandle, muMatch[2]);
+      b_mu_q->at(2) = muRef->charge();
+      b_mu_pt->at(2) = muRef->pt();
+      b_mu_dR->at(2) = deltaR(muRef->p4(), sv.leg1);
+      fillMuonId(muRef, pv, b_mu_id, vMapHandles, b_mu_vids_, 2);
     }
 
     // Match gen muons or hadrons to the SV legs
@@ -766,9 +786,11 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
   return result;
 }
 
-void MuonMisIDNtupleMaker::fillMuonId(const reco::Muon& mu, const reco::Vertex& vtx,
-                                      std::vector<bool>* result[], int idx) const
+void MuonMisIDNtupleMaker::fillMuonId(reco::MuonRef muRef, const reco::Vertex& vtx, vbool* result[],
+                                      std::vector<edm::Handle<VMapF> >& vMapHandles, std::vector<vbool*>& results2, int idx) const
 {
+  const auto& mu = *muRef;
+
   int nId = 0;
   result[nId++]->at(idx) = muon::isTightMuon(mu, vtx);
   result[nId++]->at(idx) = muon::isMediumMuon(mu);
@@ -801,10 +823,15 @@ void MuonMisIDNtupleMaker::fillMuonId(const reco::Muon& mu, const reco::Vertex& 
   result[nId++]->at(idx) = muon::isGoodMuon(mu, muon::RPCMuLoose, reco::Muon::RPCHitAndTrackArbitration);
 
   assert(nId == nId_);
+
+  for ( int i=0, n=vMapHandles.size(); i<n; ++i ) {
+    auto& handle = vMapHandles.at(i);
+    results2[i]->at(idx) = (*handle)[muRef] > 0.5;
+  }
 }
 
 template<typename T1, typename T2>
-std::vector<int> MuonMisIDNtupleMaker::matchByDR(const T1& etas, const T1& phis, T2& coll) const
+vint MuonMisIDNtupleMaker::matchByDR(const T1& etas, const T1& phis, T2& coll) const
 {
   assert(etas.size() == phis.size());
   const int n = etas.size(), m = coll.size();
@@ -828,7 +855,7 @@ std::vector<int> MuonMisIDNtupleMaker::matchByDR(const T1& etas, const T1& phis,
   }
 
   // Cleanup to make unique mapping
-  std::vector<int> result(n, -1);
+  vint result(n, -1);
   for ( const auto& match : matches ) {
     //const double dR2 = match.first;
     const int i = match.second.first, j = match.second.second;

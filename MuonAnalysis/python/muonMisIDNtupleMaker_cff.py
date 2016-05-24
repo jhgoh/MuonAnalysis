@@ -1,5 +1,8 @@
 import FWCore.ParameterSet.Config as cms
 
+from SKKU.RPCMuonAnalysis.rpcMuonIds_cfi import *
+rpcMuonIds.src = "muons"
+
 ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
     muons = cms.InputTag("muons"),
     tracks = cms.InputTag("generalTracks"),
@@ -26,6 +29,17 @@ ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
     maxVtxLxy = cms.untracked.double(40),
     maxVtxChi2 = cms.untracked.double(7.),
     minVtxSignif = cms.untracked.double(-5),
+
+    idMaps = cms.VPSet(
+        cms.PSet(name=cms.untracked.string("RPCLoose"), src=cms.InputTag("rpcMuonIds:Loose")),
+        cms.PSet(name=cms.untracked.string("RPCTight"), src=cms.InputTag("rpcMuonIds:Tight")),
+        cms.PSet(name=cms.untracked.string("TStLoose"), src=cms.InputTag("rpcMuonIds:TwoStationLoose")),
+        cms.PSet(name=cms.untracked.string("TStLoose"), src=cms.InputTag("rpcMuonIds:TwoStationTight")),
+        cms.PSet(name=cms.untracked.string("LStLoose"), src=cms.InputTag("rpcMuonIds:LastStationLoose")),
+        cms.PSet(name=cms.untracked.string("LStLoose"), src=cms.InputTag("rpcMuonIds:LastStationTight")),
+        cms.PSet(name=cms.untracked.string("SStLoose"), src=cms.InputTag("rpcMuonIds:SecondStationLoose")),
+        cms.PSet(name=cms.untracked.string("SStLoose"), src=cms.InputTag("rpcMuonIds:SecondStationTight")),
+    ),
 )
 
 phi = ks.clone(vtxType = cms.untracked.string("phi"), minTrkSigXY = cms.untracked.double(-999),)
@@ -36,5 +50,5 @@ Bp = ks.clone(vtxType = cms.untracked.string("B+"))
 jpsi = ks.clone(vtxType = cms.untracked.string("jpsi"))
 
 #misIDSeq = cms.Sequence(ks + phi + lamb + D0 + Dp + Bp + jpsi)
-misIDSeq = cms.Sequence(ks + phi + lamb)
+misIDSeq = cms.Sequence(rpcMuonIds * ks + phi + lamb)
 
