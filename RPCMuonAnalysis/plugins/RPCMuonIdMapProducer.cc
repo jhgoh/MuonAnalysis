@@ -103,8 +103,14 @@ void RPCMuonIdMapProducer::produce(edm::Event& event, const edm::EventSetup& eve
         return false;
       }();
 
-      const double dx = muMatch.dist();
-      const double dxErr = muMatch.distErr();
+      double dx = 1e9, dxErr = 1e9;
+      for ( auto& rpcMatch : muMatch.rpcMatches ) {
+        const double dx1 = std::abs(muMatch.x-rpcMatch.x);
+        if ( dx1 < dx ) {
+          dx = dx1;
+          dxErr = muMatch.xErr;
+        }
+      }
       if ( dx < 20 or dx < 4*dxErr ) {
         matchedStLoose.insert(st);
         ++nLayerLoose;
