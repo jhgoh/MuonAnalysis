@@ -32,18 +32,20 @@ varNames = {
     "abseta":("%s pseudorapidity |#eta|" % xtitle)
 }
 idSets = [
-    ("RPC","RPC Loose ID", kRed),
-    ("TRK","Tracker muons (no arbitration)", kBlue),
+    #("RPC","RPC Loose ID", kRed),
+    #("TRK","Tracker muons (no arbitration)", kBlack),
+    #("Soft","Soft muon ID", kAzure+1),
     ("Loose","Loose muon ID", kGreen+1),
     ("Medium","Medium muon ID", kMagenta),
     ("Tight","Tight muon ID", kBlack),
-    ("Soft","Soft muon ID", kAzure+1),
-    #("OneLoose","TMOneStationLoose", kBlue),
-    #("OneTight","TMOneStationTight", kGreen+1),
-    #("TMLastLoose","TMLastStationLoose", kGreen+1),
-    #("TMLastTight","TMLastStationTight", kMagenta),
-    #("TM2DLoose","TM2DLoose" kBlack),
-    #("TM2DTight","TM2DTight", kAzure+1),
+    #("OneLoose","TMOneStationLoose", kRed),
+    #("OneTight","TMOneStationTight", kRed),
+    #("LastLowPtLoose","TMLastLowPtLoose", kMagenta),
+    #("LastLowPtTight","TMLastLowPtTight", kMagenta),
+    #("TMLastLoose","TMLastStationLoose", kViolet+3),
+    #("TMLastTight","TMLastStationTight", kViolet+3),
+    #("TM2DLoose","TM2DLoose", kRed-2),
+    #("TM2DTight","TM2DTight", kRed-2),
 ]
 
 frames = {}

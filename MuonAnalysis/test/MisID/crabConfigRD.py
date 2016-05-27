@@ -21,5 +21,5 @@ config.section_("Site")
 # Where the output files will be transmitted to
 config.Site.storageSite = 'T2_CH_CERN'
 #crab checkwrite --site=T3_KR_KISTI --lfn=/store/group/CAT/
-config.Data.outLFNDirBase = '/store/user/jhgoh/MuonMisID/20160416_1/JetHT_2015D'
+config.Data.outLFNDirBase = '/store/user/jhgoh/MuonMisID/20160525_1/JetHT_2015D'
 

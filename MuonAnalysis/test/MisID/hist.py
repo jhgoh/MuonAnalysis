@@ -20,10 +20,16 @@ modeSet = {
 
 precut = "vtx_lxy < 4.0"
 idSet = {
-    "Tight":"isTight", "Medium":"isMedium", "Loose":"isLoose",
+    "Tight":"isTight", "Medium":"isMedium",
+    "Loose":"isLoose",
     "Soft":"isSoft", "HighPt":"isHighPt",
     "GLB":"isGLB", "TRK":"isTRK", "STA":"isSTA", "RPC":"isRPC",
-    "GLBPT":"isGLBPT", "TMLastLoose":"isTMLastLoose", "TMLastTight":"isTMLastTight",
+    "RPCTwoLaLoose":"RPCLoose", "RPCTwoLaTight":"RPCTight",
+    "RPCTwoStLoose":"TStLoose", "RPCTwoStTight":"TStTight",
+    "RPCLastStLoose":"LStLoose", "RPCLastStTight":"LStTight",
+    "RPCNotFirstStLoose":"SStLoose", "RPCNotFirstStTight":"SStTight",
+    "GLBPT":"isGLBPT",
+    "TMLastLoose":"isTMLastLoose", "TMLastTight":"isTMLastTight",
     "TM2DLoose":"isTM2DLoose", "TM2DTight":"isTM2DTight",
     "OneLoose":"isOneLoose", "OneTight":"isOneTight",
     "LastLowPtLoose":"isLastLowPtLoose", "LastLowPtTight":"isLastLowPtTight",
@@ -88,14 +94,14 @@ def project(dirName, mode, fName):
 if __name__ == '__main__':
     import sys
 
-    eosBase = "root://eoscms//eos/cms/store/user/jhgoh/MuonMisID/20160412_1"
-    #eosBase = "/afs/cern.ch/user/j/jhgoh/eos/cms/store/user/jhgoh/MuonMisID/20160412_1"
+    eosBase = "root://eoscms//eos/cms/store/user/jhgoh/MuonMisID/20160525_1"
+    #eosBase = "/afs/cern.ch/user/j/jhgoh/eos/cms/store/user/jhgoh/MuonMisID/20160525_1"
 
     if len(sys.argv) == 1:
         from multiprocessing import Pool
         ## To run on a multicore host
-        filesRD = ['%s/JetHT_2015D/JetHT/crab_20160412_152954/160412_133018/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,2)]#162)]
-        filesMC = ['%s/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160412_153031/160412_133052/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,2)]#629)]
+        filesRD = ['%s/JetHT_2015D/JetHT/crab_20160525_053647/160525_033718/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,2)]#162)]
+        filesMC = ['%s/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160525_091142/160525_071216/0000/ntuple_%d.root' % (eosBase, i) for i in range(1,2)]#629)]
 
         p = Pool(processes = 8)
         for mode in modeSet:
@@ -115,9 +121,8 @@ if __name__ == '__main__':
         if not os.path.exists("MC/%s" % mode): os.makedirs("MC/%s" % mode)
 
         if dataType == 'RD':
-            f = '%s/JetHT_2015D/JetHT/crab_20160412_152954/160412_133018/0000/ntuple_%d.root' % (eosBase, fileIndex)
-            project(dataType, mode, f)
+            f = '%s/JetHT_2015D/JetHT/crab_20160525_053647/160525_033718/0000/ntuple_%d.root' % (eosBase, fileIndex) project(dataType, mode, f)
         elif dataType == 'MC':
-            f = '%s/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160412_153031/160412_133052/0000/ntuple_%d.root' % (eosBase, fileIndex)
+            f = '%s/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160525_091142/160525_071216/0000/ntuple_%d.root' % (eosBase, fileIndex)
             project(dataType, mode, f)
 
