@@ -102,6 +102,7 @@ def fit(hA, hB, canvas = None, outdir = None):
         s = RooFit.Slice(ws.index, "A")
         simPdf.plotOn(frameA, s, proj, RooFit.LineColor(kGreen))
         simPdf.plotOn(frameA, s, proj, RooFit.LineColor(kGreen), RooFit.Components("bkgA"), RooFit.LineStyle(kDashed))
+        simPdf.plotOn(frameA, s, proj, RooFit.FillColor(kGreen), RooFit.Components("sigA"), RooFit.LineStyle(0), RooFit.FillStyle(1001), RooFit.DrawOption("F"))
 
         frameB = mass.frame()
         dataSim.plotOn(frameB, RooFit.Cut("index==index::B"))
@@ -109,32 +110,33 @@ def fit(hA, hB, canvas = None, outdir = None):
         s = RooFit.Slice(ws.index, "B")
         simPdf.plotOn(frameB, s, proj, RooFit.LineColor(kRed))
         simPdf.plotOn(frameB, s, proj, RooFit.LineColor(kRed), RooFit.Components("bkgB"), RooFit.LineStyle(kDashed))
+        simPdf.plotOn(frameB, s, proj, RooFit.FillColor(kRed), RooFit.Components("sigB"), RooFit.LineStyle(0), RooFit.FillStyle(1001), RooFit.DrawOption("F"))
 
-        print "@@@ Plotting NLL @@@"
-        canvas.Divide(2,1)
+        #print "@@@ Plotting NLL @@@"
+        canvas.Divide(2,2)
         canvas.cd(1)
         frameA.Draw()
         canvas.cd(2)
         frameB.Draw()
-        #canvas.cd(3)
-        #frameNLL = ws.var("ratio").frame(RooFit.Range(0, 2e-2))
-        #nll.plotOn(frameNLL, RooFit.Range(0,2e-2))
-        #frameNLL.Draw()
+        canvas.cd(3)
+        frameNLL = ws.var("ratio").frame(RooFit.Range(0, 2e-2))
+        nll.plotOn(frameNLL, RooFit.Range(0,2e-2), RooFit.ShiftToZero(), RooFit.Precision(1))
+        frameNLL.Draw()
 
-        #print "@@@ Printing fit results @@@"
-        #canvas.cd(4)
-        #l = TPaveText(0,0,1,1)
-        #l.SetTextAlign(11)
-        #l.SetFillStyle(0)
-        #l.AddText("Fit results")
-        #pars = result.floatParsFinal()
-        #for i in xrange(pars.getSize()):
-        #    par = pars[i]
-        #    if par.hasAsymError():
-        #        l.AddText(" %s = %f + %f - %f" % (par.GetName(), par.getVal(), par.getErrorHi(), par.getErrorLo()))
-        #    else:
-        #        l.AddText(" %s = %f +- %f" % (par.GetName(), par.getVal(), par.getError()))
-        #l.Draw()
+        print "@@@ Printing fit results @@@"
+        canvas.cd(4)
+        l = TPaveText(0,0,1,1)
+        l.SetTextAlign(11)
+        l.SetFillStyle(0)
+        l.AddText("Fit results")
+        pars = result.floatParsFinal()
+        for i in xrange(pars.getSize()):
+            par = pars[i]
+            if par.hasAsymError():
+                l.AddText(" %s = %f + %f - %f" % (par.GetName(), par.getVal(), par.getErrorHi(), par.getErrorLo()))
+            else:
+                l.AddText(" %s = %f +- %f" % (par.GetName(), par.getVal(), par.getError()))
+        l.Draw()
 
         if outdir != None:
             outdir.cd()
@@ -177,7 +179,7 @@ if __name__ == '__main__':
                 gRatio1 = TGraphAsymmErrors()
                 gRatio1.SetName("gRatio")
             elif mode == 'phi':
-                varDirOut1 = makedirs(fOut, '/'.join(['Kp', idName, varName]))
+                varDirOut1 = makedirs(fOut, '/'.join(['kaon', idName, varName]))
                 varDirOut1.cd()
                 gRatio1 = TGraphAsymmErrors()
                 gRatio1.SetName("gRatio")
@@ -195,7 +197,7 @@ if __name__ == '__main__':
 
                 if mode == 'lamb':
                     varDirOut1.cd()
-                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 250)
+                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
                     res = fit(hA1, hB1, c, varDirOut1)
                     c.Write()
 
@@ -208,7 +210,7 @@ if __name__ == '__main__':
 
                 elif mode == 'ks' or mode == 'phi':
                     varDirOut1.cd()
-                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 250)
+                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
                     hA1.Add(hA2)
                     hB1.Add(hB2)
                     res = fit(hA1, hB1, c, varDirOut1)
