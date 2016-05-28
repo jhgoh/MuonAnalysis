@@ -17,12 +17,21 @@ import sys
 if len(sys.argv) > 2:
     #wp can be RPC, or combinations of (RPC, RPCLSt, RPCSSt, RPCTSt) x (Loose, Tight)
     wp = sys.argv[2]
-    setattr(process.tnp.Cuts, 'cut'+wp, cms.vstring('cut'+wp, wp, "0.5"))
-    setattr(process.tnp.Variables, wp, cms.vstring('%s WP' % wp, '-1', '2', ''))
-    #setattr(process.tnp.Categories, wp, cms.vstring(wp, "dummy[pass=1,fail=0]"))
+    cutwp = 'cut'+wp
+
+    if hasattr(process.tnp.Categories, wp): cutwp = wp
+
+    if not hasattr(process.tnp.Cuts, cutwp):
+        setattr(process.tnp.Variables, wp, cms.vstring(wp, "-1", "2", "")) ## Register the flag variable, this must be defined in the tree
+        setattr(process.tnp.Cuts, cutwp, cms.vstring(cutwp, wp, "0.5"))
+
     for key in process.tnp.Efficiencies.parameters_().keys():
         if not hasattr(getattr(process.tnp.Efficiencies, key), 'EfficiencyCategoryAndState'): continue
-        getattr(process.tnp.Efficiencies, key).EfficiencyCategoryAndState = ['cut'+wp, 'above']
+        if hasattr(process.tnp.Categories, cutwp):
+            getattr(process.tnp.Efficiencies, key).EfficiencyCategoryAndState = [cutwp, 'pass']
+        elif hasattr(process.tnp.Cuts, cutwp):
+            getattr(process.tnp.Efficiencies, key).EfficiencyCategoryAndState = [cutwp, 'above']
+
     process.tnp.OutputFileName = "tp_fit_SingleMuon_Run2015D_%s.root" % wp
 
 for i in range(1, 162):

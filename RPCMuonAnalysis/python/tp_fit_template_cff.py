@@ -19,8 +19,15 @@ fitTemplate = cms.EDAnalyzer("TagProbeFitTreeAnalyzer",
         RPC   = cms.vstring("RPC Muon", "dummy[pass=1,fail=0]"),
     ),
 
-    Cuts = cms.PSet(),
-    Expressions = cms.PSet(),
+    Expressions = cms.PSet(
+        LooseDefault = cms.vstring("Loose Default", "PF&&(Glb||TM)", "PF", "Glb", "TM"),
+        LooseWithRPC = cms.vstring('Loose with RPC', "PF&&(Glb||TM||RPC)", "PF", "Glb", "TM", "RPC"),
+    ),
+
+    Cuts = cms.PSet(
+        cutLooseDefault = cms.vstring("cut Loose Default", "LooseDefault", "0.5"),
+        cutLooseWithRPC = cms.vstring("cut Loose with RPC", "LooseWithRPC", "0.5"),
+    ),
 
     PDFs = cms.PSet(
         voigtPlusExpo = cms.vstring(
