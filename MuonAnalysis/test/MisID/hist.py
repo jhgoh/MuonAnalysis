@@ -121,7 +121,8 @@ if __name__ == '__main__':
         if not os.path.exists("MC/%s" % mode): os.makedirs("MC/%s" % mode)
 
         if dataType == 'RD':
-            f = '%s/JetHT_2015D/JetHT/crab_20160525_053647/160525_033718/0000/ntuple_%d.root' % (eosBase, fileIndex) project(dataType, mode, f)
+            f = '%s/JetHT_2015D/JetHT/crab_20160525_053647/160525_033718/0000/ntuple_%d.root' % (eosBase, fileIndex)
+            project(dataType, mode, f)
         elif dataType == 'MC':
             f = '%s/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160525_091142/160525_071216/0000/ntuple_%d.root' % (eosBase, fileIndex)
             project(dataType, mode, f)
