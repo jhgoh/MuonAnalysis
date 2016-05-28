@@ -181,10 +181,6 @@ if __name__ == '__main__':
                 varDirOut1.cd()
                 gRatio1 = TGraphAsymmErrors()
                 gRatio1.SetName("gRatio")
-                varDirOut2 = makedirs(fOut, '/'.join(['Km', idName, varName]))
-                varDirOut2.cd()
-                gRatio2 = TGraphAsymmErrors()
-                gRatio2.SetName("gRatio")
 
             for b in range(hFrame.GetNbinsX()):
                 bb = b+1
@@ -210,7 +206,7 @@ if __name__ == '__main__':
                     gRatio1.SetPoint(b, x, y)
                     gRatio1.SetPointError(b, ex, ex, abs(eyLo), eyHi)
 
-                elif mode == 'ks':
+                elif mode == 'ks' or mode == 'phi':
                     varDirOut1.cd()
                     c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 250)
                     hA1.Add(hA2)
@@ -225,35 +221,6 @@ if __name__ == '__main__':
                     gRatio1.SetPoint(b, x, y)
                     gRatio1.SetPointError(b, ex, ex, abs(eyLo), eyHi)
 
-                elif mode == 'phi':
-                    varDirOut1.cd()
-                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 250)
-                    res = fit(hA1, hB1, c, varDirOut1)
-                    c.Write()
-
-                    y = res.getVal()
-                    if res.hasAsymError(): eyHi, eyLo = res.getErrorHi(), res.getErrorLo()
-                    else:  eyHi, eyLo = res.getError(), res.getError()
-
-                    gRatio1.SetPoint(b, x, y)
-                    gRatio1.SetPointError(b, ex, ex, abs(eyLo), eyHi)
-
-                    varDirOut2.cd()
-                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 250)
-                    res = fit(hA2, hB2, c, varDirOut2)
-                    c.Write()
-
-                    y = res.getVal()
-                    if res.hasAsymError(): eyHi, eyLo = res.getErrorHi(), res.getErrorLo()
-                    else:  eyHi, eyLo = res.getError(), res.getError()
-
-                    gRatio2.SetPoint(b, x, y)
-                    gRatio2.SetPointError(b, ex, ex, abs(eyLo), eyHi)
             varDirOut1.cd()
             hFrame.Clone().Write()
             gRatio1.Write()
-            if 'gRatio2' in locals():
-                varDirOut2.cd()
-                hFrame.Clone().Write()
-                gRatio2.Write()
-
