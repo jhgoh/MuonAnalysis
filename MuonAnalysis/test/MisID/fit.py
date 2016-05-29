@@ -197,12 +197,6 @@ if __name__ == '__main__':
                 hA2 = varDir2.Get("bin%d/hPass" % (bb))
                 hB2 = varDir2.Get("bin%d/hFail" % (bb))
 
-                if hAIncl == None:
-                    hAIncl = hA1.Clone()
-                    hBIncl = hB1.Clone()
-                    hAIncl.Reset()
-                    hBIncl.Reset()
-
                 x  = hFrame.GetXaxis().GetBinCenter(bb)
                 ex = hFrame.GetXaxis().GetBinWidth(bb)/2
 
@@ -219,9 +213,6 @@ if __name__ == '__main__':
                     gRatio1.SetPoint(b, x, y)
                     gRatio1.SetPointError(b, ex, ex, abs(eyLo), eyHi)
 
-                    hAIncl.Add(hA1)
-                    hBIncl.Add(hB1)
-
                 elif mode == 'ks' or mode == 'phi':
                     varDirOut1.cd()
                     c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 250*nX, 250*nY)
@@ -237,25 +228,29 @@ if __name__ == '__main__':
                     gRatio1.SetPoint(b, x, y)
                     gRatio1.SetPointError(b, ex, ex, abs(eyLo), eyHi)
 
+                if hAIncl == None:
+                    hAIncl = hA1.Clone()
+                    hBIncl = hB1.Clone()
+                else:
                     hAIncl.Add(hA1)
                     hBIncl.Add(hB1)
-                    hAIncl.Add(hA2)
-                    hBIncl.Add(hB2)
 
             varDirOut1.cd()
             hFrame.Clone().Write()
             gRatio1.Write()
 
             c = TCanvas("c_all", "c_all", 250*nX, 250*nY)
-            res = fit(hA1, hB1, c, varDirOut1)
+            res = fit(hAIncl, hBIncl, c, varDirOut1)
             c.Write()
 
             y = res.getVal()
             if res.hasAsymError(): eyHi, eyLo = res.getErrorHi(), res.getErrorLo()
             else:  eyHi, eyLo = res.getError(), res.getError()
 
+            varDirOut1.cd()
             gRatio0 = TGraphAsymmErrors()
             gRatio0.SetName("gRatio0")
             gRatio0.SetPoint(0, 1, y)
             gRatio0.SetPointError(0, 0.5, 0.5, abs(eyLo), eyHi)
+            gRatio0.Write()
 
