@@ -4,6 +4,8 @@ import sys, os
 from ROOT import *
 from SKKU.CommonTools.tdrStyle import *
 
+nX, nY = 2, 1
+
 def makedirs(d, path):
     for p in path.split('/'):
         if p == '': continue
@@ -113,30 +115,31 @@ def fit(hA, hB, canvas = None, outdir = None):
         simPdf.plotOn(frameB, s, proj, RooFit.FillColor(kRed), RooFit.Components("sigB"), RooFit.LineStyle(0), RooFit.FillStyle(1001), RooFit.DrawOption("F"))
 
         #print "@@@ Plotting NLL @@@"
-        canvas.Divide(2,2)
+        canvas.Divide(nX, nY)
         canvas.cd(1)
         frameA.Draw()
         canvas.cd(2)
         frameB.Draw()
-        canvas.cd(3)
-        frameNLL = ws.var("ratio").frame(RooFit.Range(0, 2e-2))
-        nll.plotOn(frameNLL, RooFit.Range(0,2e-2), RooFit.ShiftToZero(), RooFit.Precision(1))
-        frameNLL.Draw()
+        if nY > 1:
+            canvas.cd(3)
+            frameNLL = ws.var("ratio").frame(RooFit.Range(0, 2e-2))
+            nll.plotOn(frameNLL, RooFit.Range(0,2e-2), RooFit.ShiftToZero(), RooFit.Precision(1))
+            frameNLL.Draw()
 
-        print "@@@ Printing fit results @@@"
-        canvas.cd(4)
-        l = TPaveText(0,0,1,1)
-        l.SetTextAlign(11)
-        l.SetFillStyle(0)
-        l.AddText("Fit results")
-        pars = result.floatParsFinal()
-        for i in xrange(pars.getSize()):
-            par = pars[i]
-            if par.hasAsymError():
-                l.AddText(" %s = %f + %f - %f" % (par.GetName(), par.getVal(), par.getErrorHi(), par.getErrorLo()))
-            else:
-                l.AddText(" %s = %f +- %f" % (par.GetName(), par.getVal(), par.getError()))
-        l.Draw()
+            print "@@@ Printing fit results @@@"
+            canvas.cd(4)
+            l = TPaveText(0,0,1,1)
+            l.SetTextAlign(11)
+            l.SetFillStyle(0)
+            l.AddText("Fit results")
+            pars = result.floatParsFinal()
+            for i in xrange(pars.getSize()):
+                par = pars[i]
+                if par.hasAsymError():
+                    l.AddText(" %s = %f + %f - %f" % (par.GetName(), par.getVal(), par.getErrorHi(), par.getErrorLo()))
+                else:
+                    l.AddText(" %s = %f +- %f" % (par.GetName(), par.getVal(), par.getError()))
+            l.Draw()
 
         if outdir != None:
             outdir.cd()
@@ -184,6 +187,8 @@ if __name__ == '__main__':
                 gRatio1 = TGraphAsymmErrors()
                 gRatio1.SetName("gRatio")
 
+            hAIncl = None
+            hBIncl = None
             for b in range(hFrame.GetNbinsX()):
                 bb = b+1
                 print '====== bin', bb, '======'
@@ -192,12 +197,18 @@ if __name__ == '__main__':
                 hA2 = varDir2.Get("bin%d/hPass" % (bb))
                 hB2 = varDir2.Get("bin%d/hFail" % (bb))
 
+                if hAIncl == None:
+                    hAIncl = hA1.Clone()
+                    hBIncl = hB1.Clone()
+                    hAIncl.Reset()
+                    hBIncl.Reset()
+
                 x  = hFrame.GetXaxis().GetBinCenter(bb)
                 ex = hFrame.GetXaxis().GetBinWidth(bb)/2
 
                 if mode == 'lamb':
                     varDirOut1.cd()
-                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
+                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 250*nX, 250*nY)
                     res = fit(hA1, hB1, c, varDirOut1)
                     c.Write()
 
@@ -208,9 +219,12 @@ if __name__ == '__main__':
                     gRatio1.SetPoint(b, x, y)
                     gRatio1.SetPointError(b, ex, ex, abs(eyLo), eyHi)
 
+                    hAIncl.Add(hA1)
+                    hBIncl.Add(hB1)
+
                 elif mode == 'ks' or mode == 'phi':
                     varDirOut1.cd()
-                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 500, 500)
+                    c = TCanvas("c_bin%d" % bb, "c_bin%d" % bb, 250*nX, 250*nY)
                     hA1.Add(hA2)
                     hB1.Add(hB2)
                     res = fit(hA1, hB1, c, varDirOut1)
@@ -223,6 +237,25 @@ if __name__ == '__main__':
                     gRatio1.SetPoint(b, x, y)
                     gRatio1.SetPointError(b, ex, ex, abs(eyLo), eyHi)
 
+                    hAIncl.Add(hA1)
+                    hBIncl.Add(hB1)
+                    hAIncl.Add(hA2)
+                    hBIncl.Add(hB2)
+
             varDirOut1.cd()
             hFrame.Clone().Write()
             gRatio1.Write()
+
+            c = TCanvas("c_all", "c_all", 250*nX, 250*nY)
+            res = fit(hA1, hB1, c, varDirOut1)
+            c.Write()
+
+            y = res.getVal()
+            if res.hasAsymError(): eyHi, eyLo = res.getErrorHi(), res.getErrorLo()
+            else:  eyHi, eyLo = res.getError(), res.getError()
+
+            gRatio0 = TGraphAsymmErrors()
+            gRatio0.SetName("gRatio0")
+            gRatio0.SetPoint(0, 1, y)
+            gRatio0.SetPointError(0, 0.5, 0.5, abs(eyLo), eyHi)
+
