@@ -54,6 +54,20 @@ graphs = {}
 maxPt = 20
 maxY = 0
 f = TFile("%s/fit_%s.root" % (dataType, mode))
+
+cOverall = TCanvas("cOverall", "cOverall", 500, 500)
+frmOverall = TH1F("frmOverall", ";;Misidentification probability (%)", len(idSets), 0, len(idSets))
+grpOverall = TGraphAsymmErrors()
+for i, (idName, idTitle, color) in enumerate(idSets):
+    idDir = f.GetDirectory("%s/%s/%s" % (submod, idName, "pt"))
+    frmOverall.GetXaxis().SetBinLabel(i+1, idName)
+    g = idDir.Get("gRatio0")
+    grpOverall.SetPoint(i, i+0.5, g.GetY()[0]*100)
+    grpOverall.SetPointError(i, 0.5, 0.5, g.GetEYlow()[0]*100, g.GetEYhigh()[0]*100)
+frmOverall.SetMaximum(2)
+frmOverall.Draw()
+grpOverall.Draw("p")
+
 #for idName in [x.GetName() for x in f.GetDirectory(submod).GetListOfKeys()]:
 for i, (idName, idTitle, color) in enumerate(idSets):
     idDir = f.GetDirectory("%s/%s" % (submod, idName))
