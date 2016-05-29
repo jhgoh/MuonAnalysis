@@ -22,11 +22,13 @@ fitTemplate = cms.EDAnalyzer("TagProbeFitTreeAnalyzer",
     Expressions = cms.PSet(
         LooseDefault = cms.vstring("Loose Default", "PF&&(Glb||TM)", "PF", "Glb", "TM"),
         LooseWithRPC = cms.vstring('Loose with RPC', "PF&&(Glb||TM||RPC)", "PF", "Glb", "TM", "RPC"),
+        LooseWithRPCNoTM = cms.vstring('Loose with RPC', "PF&&(Glb||RPC)", "PF", "Glb", "RPC"),
     ),
 
     Cuts = cms.PSet(
         cutLooseDefault = cms.vstring("cut Loose Default", "LooseDefault", "0.5"),
         cutLooseWithRPC = cms.vstring("cut Loose with RPC", "LooseWithRPC", "0.5"),
+        cutLooseWithRPCNoTM = cms.vstring("cut Loose with RPC ignore TM", "LooseWithRPCNoTM", "0.5"),
     ),
 
     PDFs = cms.PSet(

@@ -3,19 +3,24 @@
 from ROOT import *
 from array import array
 
+from SKKU.CommonTools.tdrStyle import *
+
 gStyle.SetOptTitle(0)
 gStyle.SetOptStat(0)
 
 wps = [
-    ("Loose", TFile("tp_fit_SingleMuon_Run2015D_Loose.root"), kBlack),
-    ("RPCLoose", TFile("tp_fit_SingleMuon_Run2015D_RPCLoose.root"), kRed),
-    ("RPCTight", TFile("tp_fit_SingleMuon_Run2015D_RPCTight.root"), kRed+2),
-    ("RPCTwoStLoose", TFile("tp_fit_SingleMuon_Run2015D_RPCTStLoose.root"), kBlue),
-    ("RPCLastStLoose", TFile("tp_fit_SingleMuon_Run2015D_RPCLStLoose.root"), kAzure+1),
-    ("RPCNotFirstStLoose", TFile("tp_fit_SingleMuon_Run2015D_RPCSStLoose.root"), kGreen+1),
+    ("Loose", TFile("tp_fit_SingleMuon_Run2015D_Loose.root"), kRed),
+    ("LooseWithRPC", TFile("tp_fit_SingleMuon_Run2015D_LooseWithRPC.root"), kBlue),
+    ("LooseWithRPCNoTM", TFile("tp_fit_SingleMuon_Run2015D_LooseWithRPCNoTM.root"), kBlue),
+#    ("Tight", TFile("tp_fit_SingleMuon_Run2015D_Tight2012.root"), kBlack),
+#    ("RPCLoose", TFile("tp_fit_SingleMuon_Run2015D_RPCLoose.root"), kGreen+1),
+#    ("RPCTight", TFile("tp_fit_SingleMuon_Run2015D_RPCTight.root"), kRed+2),
+#    ("RPCTwoStLoose", TFile("tp_fit_SingleMuon_Run2015D_RPCTStLoose.root"), kBlue),
+#    ("RPCLastStLoose", TFile("tp_fit_SingleMuon_Run2015D_RPCLStLoose.root"), kAzure+1),
+#    ("RPCNotFirstStLoose", TFile("tp_fit_SingleMuon_Run2015D_RPCSStLoose.root"), kGreen+1),
 ]
 
-leg = TLegend(0.5, 0.15, 0.9, 0.4)
+leg = TLegend(0.5, 0.20, 0.9, 0.4)
 leg.SetFillStyle(0)
 leg.SetBorderSize(0)
 
@@ -44,8 +49,12 @@ xbins = array('d', [grp.GetX()[i]-grp.GetEXlow()[i] for i in range(nPoint-1)]
 gROOT.cd()
 c = TCanvas("c", "c", 500, 500)
 frm = TH1F("hFrame", ";Muon pseudorapidity |#eta|;Efficiency", len(xbins)-1, xbins)
-frm.SetMinimum(0.5)
+frm.SetMinimum(0.8)
 frm.SetMaximum(1.01)
+frm.GetYaxis().SetNdivisions(505)
+frm.GetYaxis().SetTitleSize(0.05)
+frm.GetXaxis().SetTitleSize(0.05)
+frm.GetXaxis().SetTitleOffset(1.1)
 frm.Draw()
 
 for g in grps: g.Draw("P")
