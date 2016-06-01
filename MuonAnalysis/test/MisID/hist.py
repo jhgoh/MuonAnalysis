@@ -67,13 +67,15 @@ def project(dirName, mode, fName):
                 title = varSet[varName]['title']
                 expr = varSet[varName]['expr']
 
+                guideCut = "trk_pt[%d] >= %f && trk_pt[%d] < %f" % (leg, bins[0], leg, bins[-1])
+
                 varDir.cd()
                 hFrame = TH1D("hFrame", "%s;%s" % (varName, title), len(bins)-1, array('d', bins))
                 hFrame.Write()
 
                 for b in range(len(bins)-1):
                     minX, maxX = bins[b], bins[b+1]
-                    cutBin = "%s >= %f && %s < %f" % ((expr%leg), minX, (expr%leg), maxX)
+                    cutBin = "%s && %s >= %f && %s < %f" % (guideCut, (expr%leg), minX, (expr%leg), maxX)
                     if idName == "RPC": cutBin += " && fabs(trk_eta[%d]) < 1.6" % leg
                     cutPass = "(%s) && (%s) &&  (%s)" % (precut, cutBin, cutID)
                     cutFail = "(%s) && (%s) && !(%s)" % (precut, cutBin, cutID)
