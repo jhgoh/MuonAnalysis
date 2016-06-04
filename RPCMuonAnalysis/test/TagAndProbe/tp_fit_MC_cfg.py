@@ -25,6 +25,9 @@ if len(sys.argv) > 2:
         getattr(process.tnp.Efficiencies, key).EfficiencyCategoryAndState = ['cut'+wp, 'above']
     process.tnp.OutputFileName = "tp_fit_DYJets_MG_%s.root" % wp
 
+import os
+home = os.environ["HOME"]
 for i in range(1, 25):
     #if i in (15, 18): continue
-    process.tnp.InputFileNames.append('root://eoscms//eos/cms/store/user/jhgoh/RPCMuonEff/20160524_1/DYJets_MG/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/crab_20160524_161536/160524_141626/0000/tnp_%d.root' %i)
+    #process.tnp.InputFileNames.append('root://eoscms//eos/cms/store/user/jhgoh/RPCMuonEff/20160524_1/DYJets_MG/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/crab_20160524_161536/160524_141626/0000/tnp_%d.root' %i)
+    process.tnp.InputFileNames.append(home+'/eos/cms/store/user/jhgoh/RPCMuonEff/20160524_1/DYJets_MG/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/crab_20160524_161536/160524_141626/0000/tnp_%d.root' %i)
