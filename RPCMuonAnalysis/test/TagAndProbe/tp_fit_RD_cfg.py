@@ -35,5 +35,5 @@ if len(sys.argv) > 2:
     process.tnp.OutputFileName = "tp_fit_SingleMuon_Run2015D_%s.root" % wp
 
 for i in range(1, 162):
-    #process.tnp.InputFileNames.append('root://eoscms//eos/cms/store/user/jhgoh/RPCMuonEff/20150524_1/SingleMuon_2015D/SingleMuon/crab_20160524_161748/160524_141823/0000/tnp_%d.root' % i)
-    process.tnp.InputFileNames.append('/afs/cern.ch/user/j/jhgoh/eos/cms/store/user/jhgoh/RPCMuonEff/20150524_1/SingleMuon_2015D/SingleMuon/crab_20160524_161748/160524_141823/0000/tnp_%d.root' % i)
+    #process.tnp.InputFileNames.append('root://eoscms//eos/cms/store/user/jhgoh/RPCMuonEff/20160524_1/SingleMuon_2015D/SingleMuon/crab_20160524_161748/160524_141823/0000/tnp_%d.root' % i)
+    process.tnp.InputFileNames.append('/afs/cern.ch/user/j/jhgoh/eos/cms/store/user/jhgoh/RPCMuonEff/20160524_1/SingleMuon_2015D/SingleMuon/crab_20160524_161748/160524_141823/0000/tnp_%d.root' % i)
