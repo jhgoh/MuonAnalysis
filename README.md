@@ -1,4 +1,4 @@
----++ Installation
+## Installation
 Install the muon analysis packages
 ```
 source /cvmfs/cms.cern.ch/crab3/crab.sh
@@ -17,7 +17,7 @@ cd ..
 scram b -j8
 ```
 
----++ Muon misID measurement
+## Muon misID measurement
 Testing it
 
 ```
@@ -42,7 +42,7 @@ crab submit submitCrabMC.py
 
 Currently the crab cfg files are set for the JetHT and ttbar powheg samples
 
----++ RPCMuon efficiency measurement using the Tag and Probe method
+## RPCMuon efficiency measurement using the Tag and Probe method
 
 Test the ntuple production
 
