@@ -1,16 +1,24 @@
-= Muon misID measurement =
-
-설치 방법
-
+---++ Installation
+Install the muon analysis packages
 ```
-cmsrel CMSSW_7_6_3_patch2
-cd CMSSW_7_6_3_patch2/src
+source /cvmfs/cms.cern.ch/crab3/crab.sh
+
+cmsrel CMSSW_7_6_6_patch1
+cd CMSSW_7_6_6_patch1/src
 cmsenv
 git-cms-init
-git clone https://github.com/cms-analysis/MuonAnalysis 
-git clone https://github.com/hep-skku/SKKU
+
+git-cms-addpkg MuonAnalysis
+cd MuonAnalysis
+git clone https://github.com/cms-analysis/MuonAnalysis-TagAndProbe TagAndProbe
+git clone https://github.com/jhgoh/MuonAnalysis-MuonIdentification MuonIdentification
+
+cd ..
 scram b -j8
 ```
+
+---++ Muon misID measurement
+
 
 테스팅 하기
 
@@ -29,29 +37,17 @@ eos ls /store/user/jhgoh/MuonMisID/20150401_2/TT_powheg/TT_TuneCUETP8M1_13TeV-po
 crab job섭밋하는 법
 
 ```
-source /cvmfs/cms.cern.ch/crab3/crab.sh
 crab submit submitCrabRD.py
 crab submit submitCrabMC.py
 ```
 
 현재 crab cfg파일은 JetHT와 TTbar powheg에 대해 세팅 되어 있음. 
-=== RPCMuon efficiency measurement using the Tag and Probe method ===
-
-설치 방법
-```
-cmsrel CMSSW_7_6_3_patch2
-cd CMSSW_7_6_3_patch2/src
-cmsenv
-git-cms-init
-git clone https://github.com/cms-analysis/MuonAnalysis-TagAndProbe 
-git clone https://github.com/hep-skku/SKKU
-scram b -j8
-```
+---++ RPCMuon efficiency measurement using the Tag and Probe method
 
 ntuple production 테스팅 하기
 
 ```
-cd CMSSW_7_6_3_patch2/src/SKKU/RPCMuonAnalysis/test/TagAndProbe
+cd MuonAnalysis/MuonIdentification/test/TagAndProbe
 cmsRun tp_prod_MC_cfg.py
 root -l tnp.root
 ```
@@ -59,7 +55,6 @@ root -l tnp.root
 crab job submit하기
 
 ```
-source /cvmfs/cms.cern.ch/crab3/crab.sh
 crab submit submitCrabRD.py
 crab submit submitCrabMC.py
 ```
