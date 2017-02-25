@@ -1,2 +1,4 @@
 *.py[cod]
 *.so
+__init__.py
+*.log
