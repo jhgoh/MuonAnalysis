@@ -62,9 +62,11 @@ for i, (idName, idTitle, color) in enumerate(idSets):
     g = idDir.Get("gRatio0")
     grpOverall.SetPoint(i, i+0.5, g.GetY()[0]*100)
     grpOverall.SetPointError(i, 0.5, 0.5, g.GetEYlow()[0]*100, g.GetEYhigh()[0]*100)
+    print "%s %.3f + %.3f -%.3f" % (idName, g.GetY()[0]*100, g.GetEYlow()[0]*100, g.GetEYhigh()[0]*100)
 frmOverall.SetMaximum(2)
 frmOverall.Draw()
 grpOverall.Draw("p")
+cOverall.Print("cOverall_%s.png" % mode)
 
 #for idName in [x.GetName() for x in f.GetDirectory(submod).GetListOfKeys()]:
 for i, (idName, idTitle, color) in enumerate(idSets):
