@@ -2,3 +2,5 @@
 *.so
 __init__.py
 *.log
+*.pcm
+*.d

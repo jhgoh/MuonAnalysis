@@ -1,4 +1,4 @@
----++ Installation
+## Installation
 Install the muon analysis packages
 ```
 source /cvmfs/cms.cern.ch/crab3/crab.sh
@@ -17,13 +17,22 @@ cd ..
 scram b -j8
 ```
 
----++ Muon misID measurement
-Testing it
+## Muon misID measurement
+This package includes modules and scripts to produce flat ntuples to measure the muon misidentification probability.
+The workflow starts from ntuple production, histogramming and fitting.
 
+Testing with small sample (you may have to modify the configuration file to read valid AOD root files.
 ```
 cd $CMSSW_BASE/src/MuonAnalysis/MuonIdentification/test/MisID
-cmsRun prod_misID_MC_cfg.py
-root -l hist.root
+cmsRun prod_RD_cfg.py
+#cmsRun prod_MC_cfg.py
+```
+
+You can submit crab jobs to process full dataset. Currently the configuration file is set to read 2015 data and MC.
+
+```
+crab submit crabConfigRD.py
+crab submit crabConfigMC.py
 ```
 
 You can find out TTbar powheg sample and JetHT 2015D ntuple in the eos
@@ -33,16 +42,22 @@ eos ls /store/user/jhgoh/MuonMisID/20150401_2/JetHT_2015D/JetHT/crab_20160401_14
 eos ls /store/user/jhgoh/MuonMisID/20150401_2/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160401_143809/160401_123825/0000
 ```
 
-Submit crab jobs
+new root files with histograms will be created using run_selector.C
+A root file containing invariant mass distributions for each pt, eta bins will be created. This use multiple CPUs using the Proof.
 
 ```
-crab submit submitCrabRD.py
-crab submit submitCrabMC.py
+root -b -q -l run_selector.C
 ```
 
-Currently the crab cfg files are set for the JetHT and ttbar powheg samples
+Run the fitter to extract misID probability.
 
----++ RPCMuon efficiency measurement using the Tag and Probe method
+```
+python fit.py ks hist_ks.root fit_ks.root
+python fit.py phi hist_phi.root fit_phi.root
+python fit.py lamb hist_lamb.root fit_lamb.root
+```
+
+## RPCMuon efficiency measurement using the Tag and Probe method
 
 Test the ntuple production
 
