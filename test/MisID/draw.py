@@ -3,27 +3,25 @@
 modeDef = {
     "proton":("lamb", "Proton"),
     "pion":("ks", "Pion"),
-    "Kp":("phi", "K^{+}"),
-    "Km":("phi", "K^{-}"),
+    "kaon":("phi", "K^{#pm}"),
 }
 
 import sys, os
-if len(sys.argv) < 3 or \
-    sys.argv[1] not in ("MC", "RD") or \
-    sys.argv[2] not in modeDef:
-    print "python draw.py [RD,MC] [proton,pion,Kp,Km]"
-    os.exit(1)
+if len(sys.argv) < 2 or \
+    sys.argv[1] not in modeDef:
+    print "python draw.py [proton,pion,kaon]"
+    sys.exit(1)
 
-dataType = sys.argv[1]
-submod = sys.argv[2]
+submod = sys.argv[1]
 
 from math import *
 from ROOT import *
-from SKKU.CommonTools.tdrStyle import *
-tdrStyle.SetTitleSize(0.055, "XYZ")
-tdrStyle.SetPadTopMargin(0.1)
-tdrStyle.SetTitleXOffset(1.15)
-tdrStyle.SetTitleYOffset(1.15)
+gROOT.ProcessLine(".L %s/src/MuonAnalysis/MomentumScaleCalibration/test/Macros/RooFit/tdrstyle.C" % os.environ["CMSSW_BASE"])
+gROOT.ProcessLine("setTDRStyle()")
+gROOT.ProcessLine('gStyle->SetTitleSize(0.055, "XYZ")')
+gROOT.ProcessLine('gStyle->SetPadTopMargin(0.1)')
+gROOT.ProcessLine('gStyle->SetTitleXOffset(1.15)')
+gROOT.ProcessLine('gStyle->SetTitleYOffset(1.15)')
 
 mode, xtitle = modeDef[submod]
 
@@ -53,7 +51,7 @@ graphs = {}
 
 maxPt = 20
 maxY = 0
-f = TFile("%s/fit_%s.root" % (dataType, mode))
+f = TFile("fit_%s.root" % (mode))
 
 cOverall = TCanvas("cOverall", "cOverall", 500, 500)
 frmOverall = TH1F("frmOverall", ";;Misidentification probability (%)", len(idSets), 0, len(idSets))
@@ -130,7 +128,7 @@ for varName in frames:
     label.AddText("CMS 2015 work in progress #sqrt{s} = 13 TeV, L=2.XY fb^{-1}")
     #label.Draw()
 
-    c.Print("c_%s_%s_%s.png" % (submod, varName, dataType))
+    c.Print("c_%s_%s.png" % (submod, varName))
 
     objs.extend([c, leg, label])
 
