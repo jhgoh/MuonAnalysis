@@ -112,7 +112,7 @@ private:
   //double b_genWeight, b_puWeight;
   unsigned char b_nPV, b_nSV, b_nGen;
 
-  float b_vtx_mass, b_vtx_pt, b_vtx_lxy, b_vtx_vz;
+  float b_vtx_mass, b_vtx_pt, b_vtx_lxy, b_vtx_vz, b_vtx_chi2, b_vtx_ndof;
   float b_vtx_mass12, b_vtx_mass23, b_vtx_mass13; // 3 track case for Dalitz
   vfloat* b_trk_pt, * b_trk_eta, * b_trk_phi;
   vint* b_trk_pdgId;
@@ -171,8 +171,8 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
     pdgId_ = 3122;
     pdgId1_ = 2212; pdgId2_ = 211;
     mass1_ = protonMass; mass2_ = pionMass;
-    cut_minVtxRawMass_ = 1.04; cut_maxVtxRawMass_ = 1.24;
-    cut_minVtxMass_ = 1.06; cut_maxVtxMass_ = 1.22;
+    cut_minVtxRawMass_ = 1.06; cut_maxVtxRawMass_ = 1.17;
+    cut_minVtxMass_ = 1.08; cut_maxVtxMass_ = 1.15;
   }
   else if ( vtxType == "jpsi" ) {
     pdgId_ = 443;
@@ -239,6 +239,8 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   tree_->Branch("vtx_pt"  , &b_vtx_pt  , "vtx_pt/F"  );
   tree_->Branch("vtx_lxy" , &b_vtx_lxy , "vtx_lxy/F" );
   tree_->Branch("vtx_vz"  , &b_vtx_vz  , "vtx_vz/F"  );
+  tree_->Branch("vtx_ndof", &b_vtx_ndof, "vtx_ndof/F");
+  tree_->Branch("vtx_chi2", &b_vtx_chi2, "vtx_chi2/F");
   if ( pdgId3_ != 0 ) {
     tree_->Branch("vtx_mass12", &b_vtx_mass12, "vtx_mass12/F");
     tree_->Branch("vtx_mass23", &b_vtx_mass23, "vtx_mass23/F");
@@ -382,7 +384,8 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     for ( auto track = trackHandle->begin(); track != trackHandle->end(); ++track ) {
       if ( track->pt() < 0.35 or std::abs(track->eta()) > cut_maxTrkEta_ ) continue;
       // Apply basic track quality cuts
-      if ( !track->quality(reco::TrackBase::loose) or
+      if ( !track->quality(reco::TrackBase::tight) or
+            track->originalAlgo() == reco::TrackBase::muonSeededStepOutIn or // Avoid bias from muon seeded track
           track->normalizedChi2() >= cut_maxTrkChi2_ or track->numberOfValidHits() < cut_minTrkNHit_ ) continue;
       const double ipSigXY = std::abs(track->dxy(pvPos)/track->dxyError());
       const double ipSigZ = std::abs(track->dz(pvPos)/track->dzError());
@@ -396,7 +399,8 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       if ( cand->pt() < 0.35 or std::abs(cand->eta()) > cut_maxTrkEta_ ) continue;
       auto track = cand->pseudoTrack();
       // Apply basic track quality cuts
-      if ( !track.quality(reco::TrackBase::loose) or
+      if ( !track.quality(reco::TrackBase::tight) or
+            track.algo() == reco::TrackBase::muonSeededStepOutIn or // Avoid bias from muon seeded track
             track.normalizedChi2() >= cut_maxTrkChi2_ or track.numberOfValidHits() < cut_minTrkNHit_ ) continue;
       const double ipSigXY = std::abs(track.dxy(pvPos)/track.dxyError());
       const double ipSigZ = std::abs(track.dz(pvPos)/track.dzError());
@@ -482,6 +486,8 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   for ( const auto& sv : svs ) {
     b_vtx_mass = sv.p4.mass();
     b_vtx_pt = sv.p4.pt();
+    b_vtx_ndof = sv.ndof;
+    b_vtx_chi2 = sv.chi2;
     b_vtx_lxy = sv.lxy;
     b_vtx_vz = sv.vz;
 
