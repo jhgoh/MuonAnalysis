@@ -76,7 +76,7 @@ process.tpPairs = cms.EDProducer("CandViewShallowCloneCombiner",
 )
 process.onePair = cms.EDFilter("CandViewCountFilter", src = cms.InputTag("tpPairs"), minNumber = cms.uint32(1))
 
-process.load("SKKU.RPCMuonAnalysis.rpcMuonIds_cfi")
+process.load("MuonAnalysis.MuonIdentification.rpcMuonIds_cfi")
 process.rpcMuonIds.src = "probeMuons"
 
 process.tpTree = cms.EDAnalyzer("TagProbeFitTreeProducer",
