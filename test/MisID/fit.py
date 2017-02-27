@@ -154,7 +154,7 @@ if __name__ == '__main__':
     gROOT.SetBatch(1)
 
     mode = sys.argv[1]
-    fNameIn, fNameOut = sys.argv[2], sys.argv[3]
+    fNameIn, fNameOut = "hist_%s.root" % mode, "fit_%s.root" % mode
 
     fIn = TFile(fNameIn)
     fOut = TFile(fNameOut, "RECREATE")

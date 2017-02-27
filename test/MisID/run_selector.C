@@ -8,7 +8,8 @@ void run_selector()
   std::vector<const char*> modes = {"ks", "phi", "lamb"};
   for ( auto mode : modes ) {
     TChain chain(Form("%s/tree", mode));
-    chain.Add("20170226_1/JetHT_2015D/ntuple_*.root");
+    chain.Add("TT_powheg/ntuple_*.root");
+    //chain.Add("JetHT_2015D/ntuple_*.root");
     chain.SetProof();
 
     chain.Process("Selector.C+", mode);
