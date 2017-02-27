@@ -46,9 +46,10 @@ void Selector::SlaveBegin(TTree * /*tree*/)
   std::vector<double> etabins = {0, 0.9, 1.2, 1.6, 2.4};
   const int nbins = 50;
   double xmin = 0, xmax = 1;
-  if      ( mode_ == "ks"   ) { xmin = 0.45; xmax = 0.55; }
+  minLxy_ = -4, maxLxy_ = 4;
+  if      ( mode_ == "ks"   ) { xmin = 0.45; xmax = 0.55; minLxy_ = 1; }
   else if ( mode_ == "phi"  ) { xmin = 1.00; xmax = 1.04; }
-  else if ( mode_ == "lamb" ) { xmin = 1.10; xmax = 1.13; }
+  else if ( mode_ == "lamb" ) { xmin = 1.10; xmax = 1.13; minLxy_ = 1; }
   const double xbinW = 1000*(xmax-xmin);
 
   std::string xyTitle = Form("Mass (GeV);Candidates per %f MeV", xbinW);
@@ -86,7 +87,8 @@ Bool_t Selector::Process(Long64_t entry)
 {
   GetEntry(entry);
 
-  if ( vtx_lxy > 4.0 ) return false;
+  if ( vtx_lxy > maxLxy_ or vtx_lxy < minLxy_ ) return true;
+  if ( nSV != 1 ) return true;
 
   for ( auto idName : idNames_ ) {
     for ( int leg=1; leg<=2; ++leg ) {
@@ -95,6 +97,10 @@ Bool_t Selector::Process(Long64_t entry)
 
       if ( pt < 4 or eta > 2.5 ) continue;
       if ( idName == "RPC" and eta > 2.1 ) continue;
+
+      //const double pt_other = trk_pt->at((leg-1)%2);
+      //const double eta_other = std::abs(trk_eta->at((leg-1)%2));
+      //if ( pt_other < 4 or eta_other > 2.5 ) continue;
 
       const char* path = Form("%s/%s_leg%d", mode_.c_str(), idName.c_str(), leg);
       auto hFramePt = hists_[Form("%s/pt/hFrame", path)];

@@ -94,6 +94,7 @@ public :
   std::map<std::string, TH1D*> hists_;
 
   const static std::vector<std::string> idNames_;
+  double minLxy_, maxLxy_;
 
   ClassDef(Selector,0);
 };
