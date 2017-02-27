@@ -1,4 +1,4 @@
-from SKKU.RPCMuonAnalysis.tp_prod_template_cfg import *
+from MuonAnalysis.MuonIdentification.tp_prod_template_cfg import *
 
 process.source.fileNames = [
     '/store/mc/RunIIFall15DR76/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/AODSIM/PU25nsData2015v1_76X_mcRun2_asymptotic_v12-v1/70000/B05BAC03-ACA6-E511-A7A3-02163E0169D9.root',

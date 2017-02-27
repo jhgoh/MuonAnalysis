@@ -5,7 +5,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 process.source = cms.Source("EmptySource")
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1) )
 
-from SKKU.RPCMuonAnalysis.tp_fit_template_cff import *
+from MuonAnalysis.MuonIdentification.tp_fit_template_cff import *
 process.tnp = fitTemplate.clone()
 process.tnp.InputFileNames = cms.vstring()
 process.tnp.Efficiencies.RPC_voigtExpo.UnbinnedVariables = cms.vstring("mass")

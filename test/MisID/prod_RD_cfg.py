@@ -8,7 +8,8 @@ process.load("Configuration.StandardSequences.MagneticField_cff")
 process.load("Configuration.StandardSequences.GeometryDB_cff")
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
 from Configuration.AlCa.autoCond_condDBv2 import autoCond
-process.GlobalTag.globaltag = autoCond['run2_data']
+#process.GlobalTag.globaltag = autoCond['run2_data']
+process.GlobalTag.globaltag = "76X_dataRun2_v15"
 
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 process.options = cms.untracked.PSet(
@@ -22,7 +23,7 @@ process.source.fileNames = [
     '/store/data/Run2015D/JetHT/AOD/16Dec2015-v1/00000/0A2C6696-AEAF-E511-8551-0026189438EB.root'
 ]
 
-process.load("SKKU.MuonAnalysis.muonMisIDNtupleMaker_cff")
+process.load("MuonAnalysis.MuonIdentification.muonMisIDNtupleMaker_cff")
 
 process.TFileService = cms.Service("TFileService",
     fileName = cms.string("ntuple.root"),

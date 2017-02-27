@@ -19,7 +19,7 @@ submod = sys.argv[2]
 
 from math import *
 from ROOT import *
-from SKKU.CommonTools.tdrStyle import *
+from MuonAnalysis.MuonIdentification.tdrStyle import *
 tdrStyle.SetTitleSize(0.055, "XYZ")
 tdrStyle.SetPadTopMargin(0.1)
 tdrStyle.SetTitleXOffset(1.15)

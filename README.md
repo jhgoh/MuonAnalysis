@@ -21,7 +21,7 @@ scram b -j8
 Testing it
 
 ```
-cd CMSSW_7_6_3_patch2/src/SKKU/MuonAnalysis/test
+cd $CMSSW_BASE/src/MuonAnalysis/MuonIdentification/test/MisID
 cmsRun prod_misID_MC_cfg.py
 root -l hist.root
 ```

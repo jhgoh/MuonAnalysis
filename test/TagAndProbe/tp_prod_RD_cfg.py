@@ -1,4 +1,4 @@
-from SKKU.RPCMuonAnalysis.tp_prod_template_cfg import *
+from MuonAnalysis.MuonIdentification.tp_prod_template_cfg import *
 
 process.source.fileNames = [
 #   '/store/data/Run2015D/SingleMuon/AOD/16Dec2015-v1/10000/00A3E567-75A8-E511-AD0D-0CC47A4D769E.root',
