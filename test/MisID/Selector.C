@@ -103,7 +103,7 @@ Bool_t Selector::Process(Long64_t entry)
       const int binPt = hFramePt->GetXaxis()->FindBin(pt);
       const int binEta = hFrameEta->GetXaxis()->FindBin(eta);
 
-      const bool isPass = mu_idVars_[idName]->at(leg-1) > 0.5 and mu_dR->at(leg-1) < 0.01;
+      const bool isPass = mu_idVars_[idName]->at(leg-1) > 0.5 and mu_dR->at(leg-1) >= 0 and mu_dR->at(leg-1) < 0.01;
 
       if ( binPt >= 1 and binPt <= hFramePt->GetNbinsX() ) {
         auto hPass = hists_[Form("%s/pt/bin%d/hPass", path, binPt)];
