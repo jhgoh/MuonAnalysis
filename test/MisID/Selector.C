@@ -48,7 +48,7 @@ void Selector::SlaveBegin(TTree * /*tree*/)
   double xmin = 0, xmax = 1;
   if      ( mode_ == "ks"   ) { xmin = 0.45; xmax = 0.55; }
   else if ( mode_ == "phi"  ) { xmin = 1.00; xmax = 1.04; }
-  else if ( mode_ == "lamb" ) { xmin = 1.01; xmax = 1.13; }
+  else if ( mode_ == "lamb" ) { xmin = 1.10; xmax = 1.13; }
   const double xbinW = 1000*(xmax-xmin);
 
   std::string xyTitle = Form("Mass (GeV);Candidates per %f MeV", xbinW);
