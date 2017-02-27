@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-from SKKU.RPCMuonAnalysis.rpcMuonIds_cfi import *
+from MuonAnalysis.MuonIdentification.rpcMuonIds_cfi import *
 rpcMuonIds.src = "muons"
 
 ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
@@ -31,14 +31,14 @@ ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
     minVtxSignif = cms.untracked.double(-5),
 
     idMaps = cms.VPSet(
-        cms.PSet(name=cms.untracked.string("RPCLoose"), src=cms.InputTag("rpcMuonIds:Loose")),
-        cms.PSet(name=cms.untracked.string("RPCTight"), src=cms.InputTag("rpcMuonIds:Tight")),
-        cms.PSet(name=cms.untracked.string("TStLoose"), src=cms.InputTag("rpcMuonIds:TwoStationLoose")),
-        cms.PSet(name=cms.untracked.string("TStTight"), src=cms.InputTag("rpcMuonIds:TwoStationTight")),
-        cms.PSet(name=cms.untracked.string("LStLoose"), src=cms.InputTag("rpcMuonIds:LastStationLoose")),
-        cms.PSet(name=cms.untracked.string("LStTight"), src=cms.InputTag("rpcMuonIds:LastStationTight")),
-        cms.PSet(name=cms.untracked.string("SStLoose"), src=cms.InputTag("rpcMuonIds:SecondStationLoose")),
-        cms.PSet(name=cms.untracked.string("SStTight"), src=cms.InputTag("rpcMuonIds:SecondStationTight")),
+#        cms.PSet(name=cms.untracked.string("RPCLoose"), src=cms.InputTag("rpcMuonIds:Loose")),
+#        cms.PSet(name=cms.untracked.string("RPCTight"), src=cms.InputTag("rpcMuonIds:Tight")),
+#        cms.PSet(name=cms.untracked.string("TStLoose"), src=cms.InputTag("rpcMuonIds:TwoStationLoose")),
+#        cms.PSet(name=cms.untracked.string("TStTight"), src=cms.InputTag("rpcMuonIds:TwoStationTight")),
+#        cms.PSet(name=cms.untracked.string("LStLoose"), src=cms.InputTag("rpcMuonIds:LastStationLoose")),
+#        cms.PSet(name=cms.untracked.string("LStTight"), src=cms.InputTag("rpcMuonIds:LastStationTight")),
+#        cms.PSet(name=cms.untracked.string("SStLoose"), src=cms.InputTag("rpcMuonIds:SecondStationLoose")),
+#        cms.PSet(name=cms.untracked.string("SStTight"), src=cms.InputTag("rpcMuonIds:SecondStationTight")),
     ),
 )
 
