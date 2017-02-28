@@ -1,8 +1,6 @@
 ## Installation
 Install the muon analysis packages
 ```
-source /cvmfs/cms.cern.ch/crab3/crab.sh
-
 cmsrel CMSSW_7_6_6_patch1
 cd CMSSW_7_6_6_patch1/src
 cmsenv
@@ -31,16 +29,20 @@ cmsRun prod_RD_cfg.py
 You can submit crab jobs to process full dataset. Currently the configuration file is set to read 2015 data and MC.
 
 ```
+source /cvmfs/cms.cern.ch/crab3/crab.sh
+
 crab submit crabConfigRD.py
 crab submit crabConfigMC.py
 ```
 
-You can find out TTbar powheg sample and JetHT 2015D ntuple in the eos
+You can find out TTbar powheg sample and JetHT 2015D ntuple in the eos,
+`/TT_TuneCUETP8M1_13TeV-powheg-pythia8/RunIIFall15DR76-PU25nsData2015v1_76X_mcRun2_asymptotic_v12_ext4-v1/AODSIM` and `/JetHT/Run2015D-16Dec2015-v1/AOD`.
 
 ```
-eos ls /store/user/jhgoh/MuonMisID/20150401_2/JetHT_2015D/JetHT/crab_20160401_143746/160401_123805/0000
-eos ls /store/user/jhgoh/MuonMisID/20150401_2/TT_powheg/TT_TuneCUETP8M1_13TeV-powheg-pythia8/crab_20160401_143809/160401_123825/0000
+eos ls /store/user/jhgoh/MuonMisID/20170227_1/JetHT_Run2015D/ntuple_*.root
+eos ls /store/user/jhgoh/MuonMisID/20170227_1/TT_powheg/ntuple_*.root
 ```
+(for HYU, `/data/users/jhgoh/MuonMisID/20170227_1/`)
 
 new root files with histograms will be created using run_selector.C
 A root file containing invariant mass distributions for each pt, eta bins will be created. This use multiple CPUs using the Proof.
@@ -70,6 +72,8 @@ root -l tnp.root
 Submit crab jobs
 
 ```
+source /cvmfs/cms.cern.ch/crab3/crab.sh
+
 crab submit submitCrabRD.py
 crab submit submitCrabMC.py
 ```
