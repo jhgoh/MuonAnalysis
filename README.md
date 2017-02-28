@@ -54,10 +54,18 @@ root -b -q -l run_selector.C
 Run the fitter to extract misID probability.
 
 ```
-python fit.py ks hist_ks.root fit_ks.root
-python fit.py phi hist_phi.root fit_phi.root
-python fit.py lamb hist_lamb.root fit_lamb.root
+python fit.py ks
+python fit.py phi
+python fit.py lamb
 ```
+
+This will hist_ks.root and produce fit_ks.root, etc. You can find fit canvases in the output root files.
+
+Plots can be produced with the final step,
+
+```python -i draw.py pion```
+
+or `python -i draw.py kaon`, `python -i draw.py lambda`.
 
 ## RPCMuon efficiency measurement using the Tag and Probe method
 
