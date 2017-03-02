@@ -4,7 +4,6 @@ config = Configuration()
 config.section_("General")
 config.General.transferLogs    = False
 config.General.transferOutputs = True
-config.General.workArea = "MuonMisID/JetHT_2015D"
 
 config.section_("JobType")
 config.JobType.pluginName  = 'Analysis'
@@ -24,5 +23,9 @@ config.section_("Site")
 # Where the output files will be transmitted to
 config.Site.storageSite = 'T2_CH_CERN'
 #crab checkwrite --site=T3_KR_KISTI --lfn=/store/group/CAT/
-config.Data.outLFNDirBase = '/store/user/jhgoh/MuonMisID/20170227_1/JetHT_2015D'
+
+dateTrial = "20170302_1"
+config.General.workArea = "MuonMisID/JetHT_2015D"
+config.Data.outLFNDirBase = '/store/user/jhgoh/MuonMisID/%s/JetHT_2015D' % dateTrial
+config.General.requestName = "MuonMisID_JetHT_2015D_%s" % dateTrial
 
