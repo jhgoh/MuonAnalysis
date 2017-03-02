@@ -96,11 +96,12 @@ private:
   double cut_minVtxRawMass_, cut_maxVtxRawMass_;
   double cut_minVtxRawMass12_, cut_maxVtxRawMass12_;
   double cut_minVtxMass12_, cut_maxVtxMass12_;
-  double cut_minVtxMass_, cut_maxVtxMass_, cut_minVtxLxy_, cut_maxVtxLxy_;
+  double cut_minVtxMass_, cut_maxVtxMass_, cut_minVtxLxy_, cut_maxVtxLxy_, cut_minVtxLxyz_, cut_maxVtxLxyz_;
   const double cut_minTrkPt_, cut_maxTrkEta_;
   const int cut_minTrkNHit_;
   const double cut_maxTrkChi2_, cut_minTrkSigXY_, cut_minTrkSigZ_;
   const double cut_maxVtxDCA_, cut_maxVtxChi2_, cut_minVtxSignif_;
+  const double cut_minVtxSignif3D_;
 
   double mass1_, mass2_, mass3_;
   int pdgId1_, pdgId2_, pdgId3_;
@@ -134,6 +135,8 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   useBeamSpot_(pset.getUntrackedParameter<bool>("useBeamSpot", false)),
   cut_minVtxLxy_(pset.getUntrackedParameter<double>("minVtxLxy")),
   cut_maxVtxLxy_(pset.getUntrackedParameter<double>("maxVtxLxy")),
+  cut_minVtxLxyz_(pset.getUntrackedParameter<double>("minVtxLxyz")),
+  cut_maxVtxLxyz_(pset.getUntrackedParameter<double>("maxVtxLxyz")),
   cut_minTrkPt_(pset.getUntrackedParameter<double>("minTrkPt")),
   cut_maxTrkEta_(pset.getUntrackedParameter<double>("maxTrkEta")),
   cut_minTrkNHit_(pset.getUntrackedParameter<int>("minTrkNHit")),
@@ -142,7 +145,8 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   cut_minTrkSigZ_(pset.getUntrackedParameter<double>("minTrkSigZ")),
   cut_maxVtxDCA_(pset.getUntrackedParameter<double>("maxVtxDCA")),
   cut_maxVtxChi2_(pset.getUntrackedParameter<double>("maxVtxChi2")),
-  cut_minVtxSignif_(pset.getUntrackedParameter<double>("minVtxSignif"))
+  cut_minVtxSignif_(pset.getUntrackedParameter<double>("minVtxSignif")),
+  cut_minVtxSignif3D_(pset.getUntrackedParameter<double>("minVtxSignif3D"))
 {
   genParticleToken_ = consumes<reco::GenParticleCollection>(pset.getParameter<edm::InputTag>("genParticles"));
   vertexToken_ = consumes<reco::VertexCollection>(pset.getParameter<edm::InputTag>("vertex"));
@@ -171,8 +175,8 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
     pdgId_ = 3122;
     pdgId1_ = 2212; pdgId2_ = 211;
     mass1_ = protonMass; mass2_ = pionMass;
-    cut_minVtxRawMass_ = 1.06; cut_maxVtxRawMass_ = 1.17;
-    cut_minVtxMass_ = 1.08; cut_maxVtxMass_ = 1.15;
+    cut_minVtxRawMass_ = 1.09; cut_maxVtxRawMass_ = 1.14;
+    cut_minVtxMass_ = 1.1; cut_maxVtxMass_ = 1.13;
   }
   else if ( vtxType == "jpsi" ) {
     pdgId_ = 443;
@@ -380,33 +384,36 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
 
   // Collect transient tracks
   std::vector<reco::TransientTrack> transTracks;
+  std::vector<bool> isMuonSeededFlags;
   if ( trackHandle.isValid() ) {
     for ( auto track = trackHandle->begin(); track != trackHandle->end(); ++track ) {
-      if ( track->pt() < 0.35 or std::abs(track->eta()) > cut_maxTrkEta_ ) continue;
+      if ( track->pt() < 0.5 or std::abs(track->eta()) > cut_maxTrkEta_ ) continue;
       // Apply basic track quality cuts
-      if ( !track->quality(reco::TrackBase::tight) or
-            track->originalAlgo() == reco::TrackBase::muonSeededStepOutIn or // Avoid bias from muon seeded track
+      if ( !track->quality(reco::TrackBase::loose) or
           track->normalizedChi2() >= cut_maxTrkChi2_ or track->numberOfValidHits() < cut_minTrkNHit_ ) continue;
       const double ipSigXY = std::abs(track->dxy(pvPos)/track->dxyError());
       const double ipSigZ = std::abs(track->dz(pvPos)/track->dzError());
       if ( ipSigXY < cut_minTrkSigXY_ or ipSigZ < cut_minTrkSigZ_  ) continue;
       auto transTrack = trackBuilder->build(&*track);
       transTracks.push_back(transTrack);
+      const bool isMuonSeeded = track->originalAlgo() != reco::TrackBase::muonSeededStepOutIn; // Avoid bias from muon seeded track
+      isMuonSeededFlags.push_back(isMuonSeeded);
     }
   }
   else if ( pfCandHandle.isValid() ) {
     for ( auto cand = pfCandHandle->begin(); cand != pfCandHandle->end(); ++cand ) {
-      if ( cand->pt() < 0.35 or std::abs(cand->eta()) > cut_maxTrkEta_ ) continue;
+      if ( cand->pt() < 0.5 or std::abs(cand->eta()) > cut_maxTrkEta_ ) continue;
       auto track = cand->pseudoTrack();
       // Apply basic track quality cuts
-      if ( !track.quality(reco::TrackBase::tight) or
-            track.algo() == reco::TrackBase::muonSeededStepOutIn or // Avoid bias from muon seeded track
+      if ( !track.quality(reco::TrackBase::loose) or
             track.normalizedChi2() >= cut_maxTrkChi2_ or track.numberOfValidHits() < cut_minTrkNHit_ ) continue;
       const double ipSigXY = std::abs(track.dxy(pvPos)/track.dxyError());
       const double ipSigZ = std::abs(track.dz(pvPos)/track.dzError());
       if ( ipSigXY < cut_minTrkSigXY_ or ipSigZ < cut_minTrkSigZ_  ) continue;
       auto transTrack = trackBuilder->build(track);
       transTracks.push_back(transTrack);
+      const bool isMuonSeeded = track.originalAlgo() != reco::TrackBase::muonSeededStepOutIn; // Avoid bias from muon seeded track
+      isMuonSeededFlags.push_back(isMuonSeeded);
     }
   }
 
@@ -414,15 +421,16 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   std::vector<SVFitResult> svs;
   const bool isSameFlav = (pdgId1_ == pdgId2_);
   for ( auto itr1 = transTracks.begin(); itr1 != transTracks.end(); ++itr1 ) {
+    if ( std::abs(pdgId1_) != 13 and isMuonSeededFlags.at(itr1-transTracks.begin()) ) continue;
     const reco::Track& track1 = itr1->track();
     if ( isSameFlav and track1.charge() < 0 ) continue;
     const double e1 = sqrt(mass1_*mass1_ + track1.momentum().mag2());
 
     for ( auto itr2 = transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
+      if ( std::abs(pdgId2_) != 13 and isMuonSeededFlags.at(itr2-transTracks.begin()) ) continue;
       if ( itr1 == itr2 ) continue;
       const reco::Track& track2 = itr2->track();
       if ( track1.charge() == track2.charge() ) continue;
-      if ( std::abs(deltaPhi(track1.phi(), track2.phi())) > 3.14 ) continue;
       if ( isSameFlav ) {
         if ( track2.charge() > 0 ) continue;
       }
@@ -458,10 +466,9 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
         if ( rawMass < cut_minVtxRawMass12_ or rawMass > cut_maxVtxRawMass12_ ) continue;
 
         for ( auto itr3 = transTracks.begin(); itr3 != transTracks.end(); ++itr3 ) {
+          if ( std::abs(pdgId3_) != 13 and isMuonSeededFlags.at(itr3-transTracks.begin()) ) continue;
           if ( itr1 == itr3 or itr2 == itr3 ) continue;
           const reco::Track& track3 = itr3->track();
-          if ( std::abs(deltaPhi(track1.phi(), track3.phi())) > 3.14 ) continue;
-          if ( std::abs(deltaPhi(track2.phi(), track3.phi())) > 3.14 ) continue;
           if ( track1.pt() < cut_minTrkPt_ and track2.pt() < cut_minTrkPt_ and track3.pt() < cut_minTrkPt_ ) continue;
 
           const auto momF = mom + track3.momentum();
@@ -582,8 +589,8 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
     if ( dca < 0. or dca > cut_maxVtxDCA_ ) return result;
 
     GlobalPoint cxPt = cApp.crossingPoint();
-    if ( std::hypot(cxPt.x(), cxPt.y()) > 120. or std::abs(cxPt.z()) > 300. ) return result;
-
+    if ( std::hypot(cxPt.x(), cxPt.y()) > 120. or std::abs(cxPt.z()) > 300. ) return result; // CA in the tracker volume, 1.2m, 3m
+ 
     TrajectoryStateClosestToPoint caState1 = transTrack1.trajectoryStateClosestToPoint(cxPt);
     TrajectoryStateClosestToPoint caState2 = transTrack2.trajectoryStateClosestToPoint(cxPt);
     if ( !caState1.isValid() or !caState2.isValid() ) return result;
@@ -609,8 +616,10 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
     const double sigmaRvtxMag = sqrt(ROOT::Math::Similarity(totalCov, distanceVectorXY)) / rVtxMag;
     if( rVtxMag < cut_minVtxLxy_ or rVtxMag > cut_maxVtxLxy_ or rVtxMag / sigmaRvtxMag < cut_minVtxSignif_ ) return result;
 
-    //SVector3 distanceVector3D(sv.x() - pvx, sv.y() - pvy, sv.z() - pvz);
-    //const double rVtxMag3D = ROOT::Math::Mag(distanceVector3D);
+    SVector3 distanceVector3D(sv.x() - pvPos.x(), sv.y() - pvPos.y(), sv.z() - pvPos.z());
+    const double rVtxMag3D = ROOT::Math::Mag(distanceVector3D);
+    const double sigmaRvtxMag3D = sqrt(ROOT::Math::Similarity(totalCov, distanceVector3D)) / rVtxMag3D;
+    if( rVtxMag3D < cut_minVtxLxyz_ or rVtxMag3D > cut_maxVtxLxyz_ or rVtxMag3D / sigmaRvtxMag3D < cut_minVtxSignif3D_ ) return result;
 
     // Cuts finished, now we create the candidates and push them back into the collections.
     int q1 = 0, q2 = 0;
@@ -630,7 +639,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
       mom1 = refTracks.at(0).trajectoryStateClosestToPoint(vtxPos).momentum();
       mom2 = refTracks.at(1).trajectoryStateClosestToPoint(vtxPos).momentum();
     }
-    if ( mom1.mag() <= 0 or mom2.mag() <= 0 ) return result;
+    if ( mom1.mag() <= 1 or mom2.mag() <= 1 ) return result;
     const GlobalVector mom = mom1+mom2;
 
     const double candE1 = hypot(mom1.mag(), mass1_);
@@ -639,6 +648,8 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
     const double vtxNdof = sv.ndof();
 
     reco::Particle::Point vtx(sv.x(), sv.y(), sv.z());
+    if ( sv.x()*mom.x()+sv.y()*mom.y()+sv.z()*mom.z() <= 0 ) return result;
+
     const reco::Vertex::CovarianceMatrix vtxCov(sv.covariance());
 
     const LV candLVec(mom.x(), mom.y(), mom.z(), candE1+candE2);
@@ -730,8 +741,10 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
     const double sigmaRvtxMag = sqrt(ROOT::Math::Similarity(totalCov, distanceVectorXY)) / rVtxMag;
     if( rVtxMag < cut_minVtxLxy_ or rVtxMag > cut_maxVtxLxy_ or rVtxMag / sigmaRvtxMag < cut_minVtxSignif_ ) return result;
 
-    //SVector3 distanceVector3D(sv.x() - pvx, sv.y() - pvy, sv.z() - pvz);
-    //const double rVtxMag3D = ROOT::Math::Mag(distanceVector3D);
+    SVector3 distanceVector3D(sv.x() - pvPos.x(), sv.y() - pvPos.y(), sv.z() - pvPos.z());
+    const double rVtxMag3D = ROOT::Math::Mag(distanceVector3D);
+    const double sigmaRvtxMag3D = sqrt(ROOT::Math::Similarity(totalCov, distanceVector3D)) / rVtxMag3D;
+    if( rVtxMag3D < cut_minVtxLxyz_ or rVtxMag3D > cut_maxVtxLxyz_ or rVtxMag3D / sigmaRvtxMag3D < cut_minVtxSignif3D_ ) return result;
 
     // Cuts finished, now we create the candidates and push them back into the collections.
     int q1 = 0, q2 = 0, q3 = 0;
@@ -755,7 +768,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
       mom2 = refTracks.at(1).trajectoryStateClosestToPoint(vtxPos).momentum();
       mom3 = refTracks.at(2).trajectoryStateClosestToPoint(vtxPos).momentum();
     }
-    if ( mom1.mag() <= 0 or mom2.mag() <= 0 or mom3.mag() <= 0 ) return result;
+    if ( mom1.mag() <= 1 or mom2.mag() <= 1 or mom3.mag() <= 1 ) return result;
     const GlobalVector mom12 = mom1+mom2;
     const GlobalVector mom = mom12+mom3;
 
@@ -766,6 +779,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
     const double vtxNdof = sv.ndof();
 
     reco::Particle::Point vtx(sv.x(), sv.y(), sv.z());
+    if ( sv.x()*mom.x()+sv.y()*mom.y()+sv.z()*mom.z() <= 0 ) return result;
     const reco::Vertex::CovarianceMatrix vtxCov(sv.covariance());
 
     const LV cand12LVec(mom12.x(), mom12.y(), mom12.z(), candE1+candE2);

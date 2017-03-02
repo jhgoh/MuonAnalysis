@@ -17,18 +17,21 @@ ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
 
     minTrkPt = cms.untracked.double(4.0),
     maxTrkEta = cms.untracked.double(2.5),
-    maxTrkChi2 = cms.untracked.double(10.),
-    minTrkNHit = cms.untracked.int32(7),
-    minTrkSigXY = cms.untracked.double(2),
+    maxTrkChi2 = cms.untracked.double(5.),
+    minTrkNHit = cms.untracked.int32(6),
+    minTrkSigXY = cms.untracked.double(15),
     minTrkSigZ = cms.untracked.double(-1),
 
     maxVtxDCA = cms.untracked.double(1.),
 
     vtxType = cms.untracked.string("kshort"),
     minVtxLxy = cms.untracked.double(-4),
-    maxVtxLxy = cms.untracked.double(40),
-    maxVtxChi2 = cms.untracked.double(7.),
-    minVtxSignif = cms.untracked.double(-5),
+    maxVtxLxy = cms.untracked.double(4), ## require to decay within the beam pipe
+    minVtxLxyz = cms.untracked.double(-4),
+    maxVtxLxyz = cms.untracked.double(999),
+    maxVtxChi2 = cms.untracked.double(3.),
+    minVtxSignif = cms.untracked.double(15),
+    minVtxSignif3D = cms.untracked.double(15),
 
     idMaps = cms.VPSet(
 #        cms.PSet(name=cms.untracked.string("RPCLoose"), src=cms.InputTag("rpcMuonIds:Loose")),
@@ -42,7 +45,12 @@ ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
     ),
 )
 
-phi = ks.clone(vtxType = cms.untracked.string("phi"), minTrkSigXY = cms.untracked.double(-999),)
+phi = ks.clone(
+    vtxType = cms.untracked.string("phi"),
+    minTrkSigXY = cms.untracked.double(-999),
+    minVtxSignif = cms.untracked.double(-999),
+    minVtxSignif3D = cms.untracked.double(-999),
+)
 lamb = ks.clone(vtxType = cms.untracked.string("lambda"))
 D0 = ks.clone(vtxType = cms.untracked.string("D0"))
 Dp = ks.clone(vtxType = cms.untracked.string("D+"))
@@ -50,5 +58,6 @@ Bp = ks.clone(vtxType = cms.untracked.string("B+"))
 jpsi = ks.clone(vtxType = cms.untracked.string("jpsi"))
 
 #misIDSeq = cms.Sequence(ks + phi + lamb + D0 + Dp + Bp + jpsi)
-misIDSeq = cms.Sequence(rpcMuonIds * ks + phi + lamb)
+misIDSeq = cms.Sequence(ks + phi + lamb + Bp)
+#misIDSeq = cms.Sequence(rpcMuonIds * ks + phi + lamb)
 
