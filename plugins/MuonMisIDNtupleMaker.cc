@@ -396,7 +396,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       if ( ipSigXY < cut_minTrkSigXY_ or ipSigZ < cut_minTrkSigZ_  ) continue;
       auto transTrack = trackBuilder->build(&*track);
       transTracks.push_back(transTrack);
-      const bool isMuonSeeded = track->originalAlgo() != reco::TrackBase::muonSeededStepOutIn; // Avoid bias from muon seeded track
+      const bool isMuonSeeded = track->originalAlgo() == reco::TrackBase::muonSeededStepOutIn; // Avoid bias from muon seeded track
       isMuonSeededFlags.push_back(isMuonSeeded);
     }
   }
@@ -412,7 +412,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
       if ( ipSigXY < cut_minTrkSigXY_ or ipSigZ < cut_minTrkSigZ_  ) continue;
       auto transTrack = trackBuilder->build(track);
       transTracks.push_back(transTrack);
-      const bool isMuonSeeded = track.originalAlgo() != reco::TrackBase::muonSeededStepOutIn; // Avoid bias from muon seeded track
+      const bool isMuonSeeded = track.originalAlgo() == reco::TrackBase::muonSeededStepOutIn; // Avoid bias from muon seeded track
       isMuonSeededFlags.push_back(isMuonSeeded);
     }
   }
