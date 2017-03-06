@@ -17,9 +17,8 @@ config.Data.unitsPerJob = 25
 config.section_("Site")
 # Where the output files will be transmitted to
 config.Site.storageSite = 'T2_CH_CERN'
-#crab checkwrite --site=T3_KR_KISTI --lfn=/store/group/CAT/
 
-dateTrial = "20170302_1"
+dateTrial = "20170306_1"
 config.General.workArea = "MuonMisID/TT_powheg"
 config.Data.inputDataset = "/TT_TuneCUETP8M1_13TeV-powheg-pythia8/RunIIFall15DR76-PU25nsData2015v1_76X_mcRun2_asymptotic_v12_ext4-v1/AODSIM"
 config.Data.outLFNDirBase = '/store/user/jhgoh/MuonMisID/%s/TT_powheg' % dateTrial
