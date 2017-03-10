@@ -13,13 +13,13 @@ ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
     #genParticles = cms.InputTag("packedGenParticles"), ## For the MiniAOD
 
     applyGenFilter = cms.untracked.bool(False),
-    useBeamSpot = cms.untracked.bool(True),
+    useBeamSpot = cms.untracked.bool(False),
 
     minTrkPt = cms.untracked.double(4.0),
     maxTrkEta = cms.untracked.double(2.5),
     maxTrkChi2 = cms.untracked.double(5.),
     minTrkNHit = cms.untracked.int32(6),
-    minTrkSigXY = cms.untracked.double(15),
+    minTrkSigXY = cms.untracked.double(5),
     minTrkSigZ = cms.untracked.double(-1),
 
     maxVtxDCA = cms.untracked.double(1.),
@@ -30,8 +30,8 @@ ks = cms.EDAnalyzer("MuonMisIDNtupleMaker",
     minVtxLxyz = cms.untracked.double(-4),
     maxVtxLxyz = cms.untracked.double(999),
     maxVtxChi2 = cms.untracked.double(3.),
-    minVtxSignif = cms.untracked.double(15),
-    minVtxSignif3D = cms.untracked.double(15),
+    minVtxSignif = cms.untracked.double(5),
+    minVtxSignif3D = cms.untracked.double(5),
 
     idMaps = cms.VPSet(
 #        cms.PSet(name=cms.untracked.string("RPCLoose"), src=cms.InputTag("rpcMuonIds:Loose")),
@@ -53,8 +53,8 @@ phi = ks.clone(
 )
 lamb = ks.clone(vtxType = cms.untracked.string("lambda"))
 D0 = ks.clone(vtxType = cms.untracked.string("D0"))
-Dp = ks.clone(vtxType = cms.untracked.string("D+"))
-Bp = ks.clone(vtxType = cms.untracked.string("B+"))
+Dp = ks.clone(vtxType = cms.untracked.string("D+"), maxVtxChi2 = cms.untracked.double(9.), )
+Bp = ks.clone(vtxType = cms.untracked.string("B+"), maxVtxChi2 = cms.untracked.double(9.), )
 jpsi = ks.clone(vtxType = cms.untracked.string("jpsi"))
 
 #misIDSeq = cms.Sequence(ks + phi + lamb + D0 + Dp + Bp + jpsi)

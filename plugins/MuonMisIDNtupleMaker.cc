@@ -46,7 +46,7 @@ struct SVFitResult
   int q1, q2, q3;
   reco::Particle::Point vertex;
   reco::Vertex::CovarianceMatrix cov;
-  double chi2, ndof, lxy, vz;
+  double chi2, ndof, lxy, vz, signif;
 };
 
 typedef math::XYZTLorentzVector LV;
@@ -113,7 +113,7 @@ private:
   //double b_genWeight, b_puWeight;
   unsigned char b_nPV, b_nSV, b_nGen;
 
-  float b_vtx_mass, b_vtx_pt, b_vtx_lxy, b_vtx_vz, b_vtx_chi2, b_vtx_ndof;
+  float b_vtx_mass, b_vtx_pt, b_vtx_lxy, b_vtx_vz, b_vtx_chi2, b_vtx_ndof, b_vtx_signif;
   float b_vtx_mass12, b_vtx_mass23, b_vtx_mass13; // 3 track case for Dalitz
   vfloat* b_trk_pt, * b_trk_eta, * b_trk_phi;
   vint* b_trk_pdgId;
@@ -245,6 +245,7 @@ MuonMisIDNtupleMaker::MuonMisIDNtupleMaker(const edm::ParameterSet& pset):
   tree_->Branch("vtx_vz"  , &b_vtx_vz  , "vtx_vz/F"  );
   tree_->Branch("vtx_ndof", &b_vtx_ndof, "vtx_ndof/F");
   tree_->Branch("vtx_chi2", &b_vtx_chi2, "vtx_chi2/F");
+  tree_->Branch("vtx_signif", &b_vtx_signif, "vtx_signif/F");
   if ( pdgId3_ != 0 ) {
     tree_->Branch("vtx_mass12", &b_vtx_mass12, "vtx_mass12/F");
     tree_->Branch("vtx_mass23", &b_vtx_mass23, "vtx_mass23/F");
@@ -421,13 +422,13 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
   std::vector<SVFitResult> svs;
   const bool isSameFlav = (pdgId1_ == pdgId2_);
   for ( auto itr1 = transTracks.begin(); itr1 != transTracks.end(); ++itr1 ) {
-    if ( std::abs(pdgId1_) != 13 and isMuonSeededFlags.at(itr1-transTracks.begin()) ) continue;
+    if ( pdgId1_ != 13 and isMuonSeededFlags.at(itr1-transTracks.begin()) ) continue;
     const reco::Track& track1 = itr1->track();
     if ( isSameFlav and track1.charge() < 0 ) continue;
     const double e1 = sqrt(mass1_*mass1_ + track1.momentum().mag2());
 
     for ( auto itr2 = transTracks.begin(); itr2 != transTracks.end(); ++itr2 ) {
-      if ( std::abs(pdgId2_) != 13 and isMuonSeededFlags.at(itr2-transTracks.begin()) ) continue;
+      if ( pdgId2_ != 13 and isMuonSeededFlags.at(itr2-transTracks.begin()) ) continue;
       if ( itr1 == itr2 ) continue;
       const reco::Track& track2 = itr2->track();
       if ( track1.charge() == track2.charge() ) continue;
@@ -466,7 +467,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
         if ( rawMass < cut_minVtxRawMass12_ or rawMass > cut_maxVtxRawMass12_ ) continue;
 
         for ( auto itr3 = transTracks.begin(); itr3 != transTracks.end(); ++itr3 ) {
-          if ( std::abs(pdgId3_) != 13 and isMuonSeededFlags.at(itr3-transTracks.begin()) ) continue;
+          if ( pdgId3_ != 13 and isMuonSeededFlags.at(itr3-transTracks.begin()) ) continue;
           if ( itr1 == itr3 or itr2 == itr3 ) continue;
           const reco::Track& track3 = itr3->track();
           if ( track1.pt() < cut_minTrkPt_ and track2.pt() < cut_minTrkPt_ and track3.pt() < cut_minTrkPt_ ) continue;
@@ -497,6 +498,7 @@ void MuonMisIDNtupleMaker::analyze(const edm::Event& event, const edm::EventSetu
     b_vtx_chi2 = sv.chi2;
     b_vtx_lxy = sv.lxy;
     b_vtx_vz = sv.vz;
+    b_vtx_signif = sv.signif;
 
     if ( pdgId3_ != 0 ) {
       b_vtx_mass12 = (sv.leg1+sv.leg2).mass();
@@ -666,6 +668,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
     result.cov = vtxCov;
     result.lxy = rVtxMag;
     result.vz = std::abs(pvPos.z()-vtx.z());
+    result.signif = rVtxMag / sigmaRvtxMag;
     result.isValid = true;
   } catch ( std::exception& e ) { return SVFitResult(); }
 
@@ -800,6 +803,7 @@ SVFitResult MuonMisIDNtupleMaker::fitSV(const reco::Particle::Point& pvPos, cons
     result.cov = vtxCov;
     result.lxy = rVtxMag;
     result.vz = std::abs(pvPos.z()-vtx.z());
+    result.signif = rVtxMag / sigmaRvtxMag;
     result.isValid = true;
   } catch ( std::exception& e ) { return SVFitResult(); }
 
